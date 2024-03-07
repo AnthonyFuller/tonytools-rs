@@ -9,6 +9,7 @@ use std::{
 use num::traits::FromBytes;
 
 /// Error returned by ByteReader
+#[derive(Debug)]
 pub enum ByteReaderError {
     NoBytes,
     IOError(io::Error),

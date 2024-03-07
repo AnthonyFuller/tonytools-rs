@@ -1,9 +1,10 @@
-use std::{io, num::TryFromIntError};
+use std::{default, io, num::TryFromIntError};
 
 use crate::util::bytereader::ByteReaderError;
 
 pub mod hm2016;
 
+#[derive(Debug)]
 enum Error {
     InvalidMagic,
     InvalidDimensions,
@@ -24,12 +25,15 @@ impl From<ByteReaderError> for Error {
     }
 }
 
+#[derive(Default, Debug)]
 enum Type {
     Colour,
     Normal,
     Height,
     CompoundNormal,
     Billboard,
+    #[default]
+    Default,
 }
 impl From<Type> for u16 {
     fn from(r#type: Type) -> Self {
@@ -42,6 +46,7 @@ impl TryFrom<u16> for Type {
         n.try_into()
     }
 }
+#[derive(Default, Debug)]
 enum Format {
     R16G16B16A16 = 0x0A,
     R8G8B8A8 = 0x1C,
@@ -53,6 +58,8 @@ enum Format {
     BC4 = 0x52,  //8-bit grayscale. Few or no direct uses on models?
     BC5 = 0x55,  //2-channel normal maps
     BC7 = 0x5A,  //high res color + full alpha. Used for pretty much everything...
+    #[default]
+    Default
 }
 impl From<Format> for u16 {
     fn from(format: Format) -> Self {

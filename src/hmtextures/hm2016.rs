@@ -8,6 +8,7 @@ use crate::{
 };
 use byteordered::ByteOrdered;
 use num::{traits::FromBytes, PrimInt};
+#[derive(Default)]
 struct Texture<'a> {
     pub magic: u16,
     pub metadata: MetaData,
@@ -25,6 +26,7 @@ struct Texture<'a> {
     pub pixels: &'a [u8],
 }
 
+#[derive(Default, Debug)]
 struct MetaData {
     pub r#type: Type,
     pub format: Format,
@@ -92,4 +94,16 @@ impl<'a> Texture<'a> {
 
 pub fn convert(data: &[u8], output_path: &str, metadata_path: &str, swizzle: bool) {
     unimplemented!();
+}
+
+#[test]
+fn test_2016() -> Result<(), hmtextures::Error> {
+    let file = std::fs::read("texture.text")?;
+    let mut texture = Texture::default();
+
+    texture.load(file.as_slice())?;
+
+    println!("{:?}", texture.metadata.format);
+
+    Ok(())
 }
