@@ -41,8 +41,8 @@ impl<'a> Texture<'a> {
     pub fn load(&mut self, data: &[u8]) -> Result<(), hmtextures::Error> {
         let mut buf = ByteReader::new(data);
         self.magic = match buf.read::<u16, 2>() {
-            Ok(1) => Err(hmtextures::Error::InvalidMagic),
-            Ok(n) => Ok(n),
+            Ok(1) => Ok(1),
+            Ok(_) => Err(hmtextures::Error::InvalidMagic),
             Err(e) => Err(e.into()),
         }?;
 
