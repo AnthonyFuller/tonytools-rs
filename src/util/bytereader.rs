@@ -20,9 +20,14 @@ impl From<std::io::Error> for ByteReaderError {
         ByteReaderError::IOError(err)
     }
 }
-
+#[derive(PartialEq)]
+pub enum Endianness {
+    Little,
+    Big,
+}
 pub struct ByteReader<'a> {
     buf: &'a [u8],
+    endianness: Endianness,
 }
 impl<'a> io::Read for ByteReader<'a> {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
@@ -39,8 +44,8 @@ impl<'a> BufRead for ByteReader<'a> {
     }
 }
 impl<'a> ByteReader<'a> {
-    pub fn new(buf: &'a [u8]) -> Self {
-        ByteReader { buf: buf }
+    pub fn new(buf: &'a [u8], endianness: Endianness) -> Self {
+        ByteReader { buf, endianness }
     }
     fn read_byte(&mut self) -> Result<u8, ByteReaderError> {
         let res = match self.buf.first() {
@@ -60,7 +65,11 @@ impl<'a> ByteReader<'a> {
             .collect::<Result<Vec<u8>, ByteReaderError>>()
         {
             Ok(bytes) => match bytes.as_slice().try_into() as Result<[u8; S], TryFromSliceError> {
-                Ok(raw_bytes) => Ok(T::from_le_bytes(&raw_bytes.into())),
+                Ok(raw_bytes) => Ok(if self.endianness == Endianness::Little {
+                    T::from_le_bytes(&raw_bytes.into())
+                } else {
+                    T::from_be_bytes(&raw_bytes.into())
+                }),
                 _ => Err(ByteReaderError::NoBytes),
             },
             Err(e) => Err(e),

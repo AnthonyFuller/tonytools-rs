@@ -50,9 +50,8 @@ impl TryFrom<u16> for Type {
             Self::Height,
             Self::CompoundNormal,
             Self::Billboard,
-            Self::Unknown
-            ][(value.try_into() as Result<usize, Infallible>).map_err(|_| self::Error::UnknownType)?]
-        )
+            Self::Unknown,
+        ][(value.try_into() as Result<usize, Infallible>).map_err(|_| self::Error::UnknownType)?])
     }
 }
 #[derive(Default, Debug)]
@@ -69,7 +68,6 @@ enum Format {
     BC4 = 0x52,  //8-bit grayscale. Few or no direct uses on models?
     BC5 = 0x55,  //2-channel normal maps
     BC7 = 0x5A,  //high res color + full alpha. Used for pretty much everything...
-
 }
 impl From<Format> for u16 {
     fn from(format: Format) -> Self {
@@ -91,7 +89,7 @@ impl TryFrom<u16> for Format {
             0x52 => Ok(Self::BC4),
             0x55 => Ok(Self::BC5),
             0x5A => Ok(Self::BC7),
-            _ => Err(self::Error::UnknownFormat)
+            _ => Err(self::Error::UnknownFormat),
         }
     }
 }

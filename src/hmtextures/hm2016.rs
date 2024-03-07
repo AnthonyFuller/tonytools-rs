@@ -1,10 +1,8 @@
-use std::{
-    array::TryFromSliceError, io::BufRead,
-};
+use std::{array::TryFromSliceError, io::BufRead};
 
 use crate::{
     hmtextures::{self, Format, Type},
-    util::bytereader::{ByteReader, ByteReaderError},
+    util::bytereader::{ByteReader, ByteReaderError, Endianness},
 };
 #[derive(Default, Debug)]
 struct Texture {
@@ -37,10 +35,10 @@ struct MetaData {
 
 impl Texture {
     pub fn load(data: &[u8]) -> Result<Self, hmtextures::Error> {
-        let mut buf = ByteReader::new(data);
+        let mut buf = ByteReader::new(data, Endianness::Little);
         let mut texture = Texture::default();
 
-        texture.magic = match buf.read::<u16,  2>() {
+        texture.magic = match buf.read::<u16, 2>() {
             Ok(1) => Ok(1),
             Ok(_) => Err(hmtextures::Error::InvalidMagic),
             Err(e) => Err(e.into()),
@@ -101,7 +99,7 @@ pub fn convert(data: &[u8], output_path: &str, metadata_path: &str, swizzle: boo
 #[test]
 fn test_2016() -> Result<(), hmtextures::Error> {
     let file = std::fs::read("texture.text")?;
-    let mut texture = Texture::load(file.as_slice());
+    let texture = Texture::load(file.as_slice());
 
     println!("{:#?}", texture);
     Ok(())
