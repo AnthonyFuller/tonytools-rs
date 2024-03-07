@@ -1,8 +1,5 @@
-pub enum Version {
-    H2016 = 2,
-    H2,
-    H3,
-}
+pub mod hashlist;
+pub mod locr;
 
 pub struct Rebuilt {
     pub file: Vec<u8>,
