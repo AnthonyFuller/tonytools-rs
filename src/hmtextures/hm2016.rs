@@ -1,15 +1,13 @@
 use std::{
-    array::TryFromSliceError, cmp, convert::Infallible, io::{self, BufRead, Read, Write}, iter, mem::size_of, num::TryFromIntError, vec
+    array::TryFromSliceError, io::BufRead,
 };
 
 use crate::{
     hmtextures::{self, Format, Type},
     util::bytereader::{ByteReader, ByteReaderError},
 };
-use byteordered::ByteOrdered;
-use num::{traits::FromBytes, PrimInt};
-#[derive(Default)]
-struct Texture<'a> {
+#[derive(Default, Debug)]
+struct Texture {
     pub magic: u16,
     pub metadata: MetaData,
     pub file_size: u32,
@@ -23,7 +21,7 @@ struct Texture<'a> {
 
     pub mips_datasizes: [u32; 0xE],
 
-    pub pixels: &'a [u8],
+    pub pixels: Vec<u8>,
 }
 
 #[derive(Default, Debug)]
@@ -37,58 +35,62 @@ struct MetaData {
     pub mips_interpol_mode: u8,
 }
 
-impl<'a> Texture<'a> {
-    pub fn load(&mut self, data: &[u8]) -> Result<(), hmtextures::Error> {
+impl Texture {
+    pub fn load(data: &[u8]) -> Result<Self, hmtextures::Error> {
         let mut buf = ByteReader::new(data);
-        self.magic = match buf.read::<u16, 2>() {
-            Ok(1) => Err(hmtextures::Error::InvalidMagic),
-            Ok(n) => Ok(n),
+        let mut texture = Texture::default();
+
+        texture.magic = match buf.read::<u16,  2>() {
+            Ok(1) => Ok(1),
+            Ok(_) => Err(hmtextures::Error::InvalidMagic),
             Err(e) => Err(e.into()),
         }?;
 
-        self.metadata.r#type = match buf.read::<u16, 2>() {
-            Ok(n @ 0..=3) => Ok(n.try_into().unwrap()),
+        texture.metadata.r#type = match buf.read::<u16, 2>() {
+            Ok(n @ 0..=3) => n.try_into().map_err(|_| hmtextures::Error::UnknownType),
             Ok(_) => Err(hmtextures::Error::UnknownType),
             Err(e) => Err(e.into()),
         }?;
 
-        buf.read::<u32, 4>()?; // SKIP TEXD
+        buf.consume(4); // SKIP TEXD
 
         if let [fs, fl] = buf.read_n::<u32, 4>(2)?[..] {
-            [self.file_size, self.metadata.flags] = [fs, fl];
+            [texture.file_size, texture.metadata.flags] = [fs, fl];
         };
         if let [w, h] = buf.read_n::<u16, 2>(2)?[..] {
-            [self.width, self.height] = [w, h];
+            [texture.width, texture.height] = [w, h];
         };
 
-        if let Ok(fmt) = buf.read::<u16, 2>()?.try_into() as Result<Format, TryFromIntError> {
-            self.metadata.format = fmt;
+        if let Ok(fmt) = buf.read::<u16, 2>()?.try_into() {
+            texture.metadata.format = fmt;
         };
         if let [mc, dm, ia, dim, mim] = buf.read_n::<u8, 1>(5)?[..] {
             [
-                self.mips_count,
-                self.default_mip,
-                self.metadata.interpret_as,
-                self.dimensions,
-                self.metadata.mips_interpol_mode,
+                texture.mips_count,
+                texture.default_mip,
+                texture.metadata.interpret_as,
+                texture.dimensions,
+                texture.metadata.mips_interpol_mode,
             ] = [mc, dm, ia, dim, mim];
         }
-        if self.dimensions == 0 {
+        buf.consume(1);
+        if texture.dimensions != 0 {
             return Err(hmtextures::Error::InvalidDimensions);
         }
 
         if let Ok(mds) =
             buf.read_n::<u32, 4>(14)?.as_slice().try_into() as Result<[u32; 14], TryFromSliceError>
         {
-            self.mips_datasizes = mds;
+            texture.mips_datasizes = mds;
         } else {
             return Err(hmtextures::Error::ByteReaderError(ByteReaderError::NoBytes));
         };
 
         if let [a_s, a_o] = buf.read_n::<u32, 4>(2)?[..] {
-            [self.atlas_size, self.atlas_offset] = [a_s, a_o];
+            [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
-        Ok(())
+        texture.pixels = buf.fill_buf()?.to_vec();
+        Ok(texture)
     }
 }
 
@@ -99,11 +101,8 @@ pub fn convert(data: &[u8], output_path: &str, metadata_path: &str, swizzle: boo
 #[test]
 fn test_2016() -> Result<(), hmtextures::Error> {
     let file = std::fs::read("texture.text")?;
-    let mut texture = Texture::default();
+    let mut texture = Texture::load(file.as_slice());
 
-    texture.load(file.as_slice())?;
-
-    println!("{:?}", texture.metadata.format);
-
+    println!("{:#?}", texture);
     Ok(())
 }

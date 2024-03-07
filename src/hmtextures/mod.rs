@@ -1,4 +1,4 @@
-use std::{default, io, num::TryFromIntError};
+use std::{convert::Infallible, default, io, num::TryFromIntError};
 
 use crate::util::bytereader::ByteReaderError;
 
@@ -9,6 +9,7 @@ enum Error {
     InvalidMagic,
     InvalidDimensions,
     UnknownType,
+    UnknownFormat,
     ByteReaderError(ByteReaderError),
     IOError(io::Error),
 }
@@ -25,7 +26,7 @@ impl From<ByteReaderError> for Error {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 enum Type {
     Colour,
     Normal,
@@ -33,7 +34,7 @@ enum Type {
     CompoundNormal,
     Billboard,
     #[default]
-    Default,
+    Unknown,
 }
 impl From<Type> for u16 {
     fn from(r#type: Type) -> Self {
@@ -41,13 +42,23 @@ impl From<Type> for u16 {
     }
 }
 impl TryFrom<u16> for Type {
-    type Error = TryFromIntError;
-    fn try_from(n: u16) -> Result<Type, TryFromIntError> {
-        n.try_into()
+    type Error = self::Error;
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        Ok([
+            Self::Colour,
+            Self::Normal,
+            Self::Height,
+            Self::CompoundNormal,
+            Self::Billboard,
+            Self::Unknown
+            ][(value.try_into() as Result<usize, Infallible>).map_err(|_| self::Error::UnknownType)?]
+        )
     }
 }
 #[derive(Default, Debug)]
 enum Format {
+    #[default]
+    Unknown = 0,
     R16G16B16A16 = 0x0A,
     R8G8B8A8 = 0x1C,
     R8G8 = 0x34, //Normals. very rarely used. Legacy? Only one such tex in chunk0;
@@ -58,8 +69,7 @@ enum Format {
     BC4 = 0x52,  //8-bit grayscale. Few or no direct uses on models?
     BC5 = 0x55,  //2-channel normal maps
     BC7 = 0x5A,  //high res color + full alpha. Used for pretty much everything...
-    #[default]
-    Default
+
 }
 impl From<Format> for u16 {
     fn from(format: Format) -> Self {
@@ -67,9 +77,22 @@ impl From<Format> for u16 {
     }
 }
 impl TryFrom<u16> for Format {
-    type Error = TryFromIntError;
-    fn try_from(n: u16) -> Result<Format, TryFromIntError> {
-        n.try_into()
+    type Error = self::Error;
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Unknown),
+            0x0A => Ok(Self::R16G16B16A16),
+            0x1C => Ok(Self::R8G8B8A8),
+            0x34 => Ok(Self::R8G8),
+            0x42 => Ok(Self::A8),
+            0x49 => Ok(Self::DXT1),
+            0x4C => Ok(Self::DXT3),
+            0x4F => Ok(Self::DXT5),
+            0x52 => Ok(Self::BC4),
+            0x55 => Ok(Self::BC5),
+            0x5A => Ok(Self::BC7),
+            _ => Err(self::Error::UnknownFormat)
+        }
     }
 }
 struct BuiltTexture<'a> {
