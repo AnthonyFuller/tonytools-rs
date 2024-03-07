@@ -27,33 +27,59 @@ pub enum Endianness {
 }
 pub struct ByteReader<'a> {
     buf: &'a [u8],
+    pub cursor: &'a [u8],
     endianness: Endianness,
 }
 impl<'a> io::Read for ByteReader<'a> {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         buf.write(self.buf)?;
-        Ok(cmp::min(self.buf.len(), buf.len()))
+        // probs incorrect 
+        Ok(cmp::min(self.cursor.len(), buf.len()))
     }
 }
 impl<'a> BufRead for ByteReader<'a> {
     fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
-        Ok(self.buf)
+        Ok(self.cursor)
     }
     fn consume(&mut self, amt: usize) {
-        self.buf = &self.buf[amt..];
+        self.cursor = &self.cursor[amt..];
     }
 }
 impl<'a> ByteReader<'a> {
     pub fn new(buf: &'a [u8], endianness: Endianness) -> Self {
-        ByteReader { buf, endianness }
+        ByteReader { buf: buf, cursor: buf, endianness }
     }
     fn read_byte(&mut self) -> Result<u8, ByteReaderError> {
-        let res = match self.buf.first() {
+        let res = match self.cursor.first() {
             Some(&n) => Ok(n),
             _ => Err(ByteReaderError::NoBytes),
         };
         self.consume(1);
         res
+    }
+    pub fn read_cstr(&mut self) -> Result<String, ByteReaderError> {
+        let mut vec: Vec<u8> = Vec::new();
+        loop {
+            let a = self.read_byte()?;
+            if a == 0x00 {
+                return String::from_utf8(vec).map_err(|_| ByteReaderError::NoBytes);
+            } else {
+                vec.push(a);
+            }
+        }
+    }
+    fn len(&self) -> usize {
+        self.cursor.len()
+    }
+    fn cursor(&self) -> usize {
+        self.buf.len() - self.cursor.len()
+    }
+    pub fn seek(&mut self, n: usize) -> Result<(), ByteReaderError> {
+        if n >= self.buf.len() {
+            return Err(ByteReaderError::NoBytes);
+        }
+        self.cursor = &self.buf[..n+1];
+        Ok(())
     }
     pub fn read<T: FromBytes, const S: usize>(&mut self) -> Result<T, ByteReaderError>
     where

@@ -1,5 +1,5 @@
 use bimap::BiMap;
-use binary_reader::BinaryReader;
+use crate::util::bytereader::{ByteReader, ByteReaderError, Endianness};
 
 pub struct HashList {
     pub tags: BiMap<u32, String>,
@@ -13,18 +13,18 @@ pub enum HashListError {
     InvalidFile,
     InvalidChecksum,
     DidNotReachEOF,
-    IOError(std::io::Error),
+    ReaderError(ByteReaderError),
 }
 
-impl From<std::io::Error> for HashListError {
-    fn from(err: std::io::Error) -> Self {
-        HashListError::IOError(err)
+impl From<ByteReaderError> for HashListError {
+    fn from(err: ByteReaderError) -> Self {
+        HashListError::ReaderError(err)
     }
 }
 
 impl HashList {
     pub fn load(data: &[u8]) -> Result<Self, HashListError> {
-        let mut buff = BinaryReader::from_u8(data);
+        let mut buf = ByteReader::new(data, Endianness::Little);
         let mut hashlist = HashList {
             lines: BiMap::new(),
             switches: BiMap::new(),
@@ -33,43 +33,36 @@ impl HashList {
         };
 
         // Magic
-        match buff.read_u32() {
-            Ok(0x484D4C41) => {}
+        match buf.read::<u32, 4>() {
+            Ok(0x414C4D48) => {}
             Ok(_) => return Err(HashListError::InvalidFile),
-            Err(e) => return Err(HashListError::IOError(e)),
+            Err(e) => return Err(HashListError::ReaderError(e)),
         };
 
         // Version
-        hashlist.version = buff.read_u32()?;
+        hashlist.version = buf.read::<u32, 4>()?;
 
         // Checksum
-        let checksum = buff.read_u32()?;
-        let pos = buff.pos;
-        if checksum != crc32fast::hash(buff.read_bytes(buff.length - buff.pos)?) {
+        let checksum = buf.read::<u32, 4>()?;
+        if checksum != crc32fast::hash(buf.cursor) {
             return Err(HashListError::InvalidChecksum);
         }
-        buff.jmp(pos);
 
         // Soundtags
-        for _ in 0..buff.read_u32()? {
-            hashlist.tags.insert(buff.read_u32()?, buff.read_cstr()?);
+        for _ in 0..buf.read::<u32, 4>()? {
+            hashlist.tags.insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
         }
 
         // Switches
-        for _ in 0..buff.read_u32()? {
+        for _ in 0..buf.read::<u32, 4>()? {
             hashlist
                 .switches
-                .insert(buff.read_u32()?, buff.read_cstr()?);
+                .insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
         }
 
         // Lines
-        for _ in 0..buff.read_u32()? {
-            hashlist.lines.insert(buff.read_u32()?, buff.read_cstr()?);
-        }
-
-        if buff.pos != buff.length {
-            hashlist.clear();
-            return Err(HashListError::DidNotReachEOF);
+        for _ in 0..buf.read::<u32, 4>()? {
+            hashlist.lines.insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
         }
 
         return Ok(hashlist);
@@ -94,7 +87,13 @@ fn test_hash_list() -> Result<(), std::io::Error> {
         hashlist
             .lines
             .get_by_right("EVERGREEN_SETPIECES_GEARWALL_ITEM_GEARCAPACITYCOST_DESCRIPTION")
-            .unwrap()
+    );
+
+    println!(
+        "{:?}",
+        hashlist
+            .lines
+            .get_by_left(&18554)
     );
 
     Ok(())
