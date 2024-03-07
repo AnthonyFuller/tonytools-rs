@@ -57,7 +57,9 @@ impl HashList {
 
         // Switches
         for _ in 0..buff.read_u32()? {
-            hashlist.switches.insert(buff.read_u32()?, buff.read_cstr()?);
+            hashlist
+                .switches
+                .insert(buff.read_u32()?, buff.read_cstr()?);
         }
 
         // Lines
@@ -87,7 +89,13 @@ fn test_hash_list() -> Result<(), std::io::Error> {
 
     let hashlist = HashList::load(file.as_slice()).unwrap();
 
-    println!("{:?}", hashlist.lines.get_by_right("EVERGREEN_SETPIECES_GEARWALL_ITEM_GEARCAPACITYCOST_DESCRIPTION").unwrap());
+    println!(
+        "{:?}",
+        hashlist
+            .lines
+            .get_by_right("EVERGREEN_SETPIECES_GEARWALL_ITEM_GEARCAPACITYCOST_DESCRIPTION")
+            .unwrap()
+    );
 
     Ok(())
 }
