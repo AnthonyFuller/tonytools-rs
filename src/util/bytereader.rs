@@ -53,18 +53,18 @@ impl<'a> ByteReader<'a> {
             endianness,
         }
     }
-    fn read_byte(&mut self) -> Result<u8, ByteReaderError> {
+    fn read_byte(&mut self, consume: bool) -> Result<u8, ByteReaderError> {
         let res = match self.cursor.first() {
             Some(&n) => Ok(n),
             _ => Err(ByteReaderError::NoBytes),
         };
-        self.consume(1);
+        if consume { self.consume(1); }
         res
     }
     pub fn read_cstr(&mut self) -> Result<String, ByteReaderError> {
         let mut vec: Vec<u8> = Vec::new();
         loop {
-            let a = self.read_byte()?;
+            let a = self.read_byte(true)?;
             if a == 0x00 {
                 return String::from_utf8(vec).map_err(|_| ByteReaderError::NoBytes);
             } else {
@@ -90,7 +90,27 @@ impl<'a> ByteReader<'a> {
         T::Bytes: From<[u8; S]>,
     {
         assert_eq!(S, size_of::<T>());
-        match iter::repeat_with(|| self.read_byte())
+        match iter::repeat_with(|| self.read_byte(true))
+            .take(S)
+            .collect::<Result<Vec<u8>, ByteReaderError>>()
+        {
+            Ok(bytes) => match bytes.as_slice().try_into() as Result<[u8; S], TryFromSliceError> {
+                Ok(raw_bytes) => Ok(if self.endianness == Endianness::Little {
+                    T::from_le_bytes(&raw_bytes.into())
+                } else {
+                    T::from_be_bytes(&raw_bytes.into())
+                }),
+                _ => Err(ByteReaderError::NoBytes),
+            },
+            Err(e) => Err(e),
+        }
+    }
+    pub fn peek<T: FromBytes, const S: usize>(&mut self) -> Result<T, ByteReaderError>
+    where
+        T::Bytes: From<[u8; S]>,
+    {
+        assert_eq!(S, size_of::<T>());
+        match iter::repeat_with(|| self.read_byte(false))
             .take(S)
             .collect::<Result<Vec<u8>, ByteReaderError>>()
         {
