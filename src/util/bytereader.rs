@@ -33,7 +33,7 @@ pub struct ByteReader<'a> {
 impl<'a> io::Read for ByteReader<'a> {
     fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
         buf.write(self.buf)?;
-        // probs incorrect 
+        // probs incorrect
         Ok(cmp::min(self.cursor.len(), buf.len()))
     }
 }
@@ -47,7 +47,11 @@ impl<'a> BufRead for ByteReader<'a> {
 }
 impl<'a> ByteReader<'a> {
     pub fn new(buf: &'a [u8], endianness: Endianness) -> Self {
-        ByteReader { buf: buf, cursor: buf, endianness }
+        ByteReader {
+            buf: buf,
+            cursor: buf,
+            endianness,
+        }
     }
     fn read_byte(&mut self) -> Result<u8, ByteReaderError> {
         let res = match self.cursor.first() {
@@ -68,17 +72,17 @@ impl<'a> ByteReader<'a> {
             }
         }
     }
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.cursor.len()
     }
-    fn cursor(&self) -> usize {
+    pub fn cursor(&self) -> usize {
         self.buf.len() - self.cursor.len()
     }
     pub fn seek(&mut self, n: usize) -> Result<(), ByteReaderError> {
-        if n >= self.buf.len() {
+        if n > self.buf.len() {
             return Err(ByteReaderError::NoBytes);
         }
-        self.cursor = &self.buf[..n+1];
+        self.cursor = &self.buf[n..];
         Ok(())
     }
     pub fn read<T: FromBytes, const S: usize>(&mut self) -> Result<T, ByteReaderError>
@@ -111,5 +115,12 @@ impl<'a> ByteReader<'a> {
         iter::repeat_with(|| self.read::<T, S>())
             .take(n)
             .collect::<Result<Vec<T>, ByteReaderError>>()
+    }
+    pub fn read_vec<T: FromBytes, const S: usize>(&mut self) -> Result<Vec<T>, ByteReaderError>
+    where
+        T::Bytes: From<[u8; S]>,
+    {
+        let size = self.read::<u32, 4>()? as usize;
+        self.read_n::<T, S>(size)
     }
 }
