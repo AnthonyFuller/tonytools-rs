@@ -18,3 +18,5 @@ Cargo.lock
 *.RTLV
 *.DLGE
 *.CLNG
+*.json
+*.DITL
