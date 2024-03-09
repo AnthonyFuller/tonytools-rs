@@ -21,11 +21,12 @@ impl From<std::io::Error> for ByteReaderError {
         ByteReaderError::IOError(err)
     }
 }
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Endianness {
     Little,
     Big,
 }
+#[derive(Clone)]
 pub struct ByteReader<'a> {
     buf: &'a [u8],
     pub cursor: &'a [u8],
@@ -147,7 +148,7 @@ impl<'a> ByteReader<'a> {
             .take(n)
             .collect::<Result<Vec<T>, ByteReaderError>>()
     }
-    pub fn read_vec<T: FromBytes, const S: usize>(&mut self) -> Result<Vec<T>, ByteReaderError>
+    pub fn read_vec<T: FromBytes>(&mut self) -> Result<Vec<T>, ByteReaderError>
     where
         <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
     {
