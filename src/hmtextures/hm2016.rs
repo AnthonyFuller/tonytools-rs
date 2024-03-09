@@ -38,13 +38,13 @@ impl Texture {
         let mut buf = ByteReader::new(data, Endianness::Little);
         let mut texture = Texture::default();
 
-        texture.magic = match buf.read::<u16, 2>() {
+        texture.magic = match buf.read::<u16>() {
             Ok(1) => Ok(1),
             Ok(_) => Err(hmtextures::Error::InvalidMagic),
             Err(e) => Err(e.into()),
         }?;
 
-        texture.metadata.r#type = match buf.read::<u16, 2>() {
+        texture.metadata.r#type = match buf.read::<u16>() {
             Ok(n @ 0..=3) => n.try_into().map_err(|_| hmtextures::Error::UnknownType),
             Ok(_) => Err(hmtextures::Error::UnknownType),
             Err(e) => Err(e.into()),
@@ -52,17 +52,17 @@ impl Texture {
 
         buf.consume(4); // SKIP TEXD
 
-        if let [fs, fl] = buf.read_n::<u32, 4>(2)?[..] {
+        if let [fs, fl] = buf.read_n::<u32>(2)?[..] {
             [texture.file_size, texture.metadata.flags] = [fs, fl];
         };
-        if let [w, h] = buf.read_n::<u16, 2>(2)?[..] {
+        if let [w, h] = buf.read_n::<u16>(2)?[..] {
             [texture.width, texture.height] = [w, h];
         };
 
-        if let Ok(fmt) = buf.read::<u16, 2>()?.try_into() {
+        if let Ok(fmt) = buf.read::<u16>()?.try_into() {
             texture.metadata.format = fmt;
         };
-        if let [mc, dm, ia, dim, mim] = buf.read_n::<u8, 1>(5)?[..] {
+        if let [mc, dm, ia, dim, mim] = buf.read_n::<u8>(5)?[..] {
             [
                 texture.mips_count,
                 texture.default_mip,
@@ -77,14 +77,14 @@ impl Texture {
         }
 
         if let Ok(mds) =
-            buf.read_n::<u32, 4>(14)?.as_slice().try_into() as Result<[u32; 14], TryFromSliceError>
+            buf.read_n::<u32>(14)?.as_slice().try_into() as Result<[u32; 14], TryFromSliceError>
         {
             texture.mips_datasizes = mds;
         } else {
             return Err(hmtextures::Error::ByteReaderError(ByteReaderError::NoBytes));
         };
 
-        if let [a_s, a_o] = buf.read_n::<u32, 4>(2)?[..] {
+        if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
         texture.pixels = buf.fill_buf()?.to_vec();

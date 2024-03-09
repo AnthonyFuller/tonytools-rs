@@ -3,6 +3,7 @@ use std::{
     cmp,
     io::{self, BufRead, Write},
     iter,
+    marker::PhantomData,
     mem::size_of,
 };
 
@@ -46,6 +47,15 @@ impl<'a> BufRead for ByteReader<'a> {
     }
 }
 impl<'a> ByteReader<'a> {
+    pub fn iter<T: FromBytes>(&'a mut self) -> ByteReaderIterator<T>
+    where
+        <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
+    {
+        ByteReaderIterator::<T> {
+            buf: self,
+            resource_type: PhantomData,
+        }
+    }
     pub fn new(buf: &'a [u8], endianness: Endianness) -> Self {
         ByteReader {
             buf: buf,
@@ -58,7 +68,9 @@ impl<'a> ByteReader<'a> {
             Some(&n) => Ok(n),
             _ => Err(ByteReaderError::NoBytes),
         };
-        if consume { self.consume(1); }
+        if consume {
+            self.consume(1);
+        }
         res
     }
     pub fn read_cstr(&mut self) -> Result<String, ByteReaderError> {
@@ -85,16 +97,17 @@ impl<'a> ByteReader<'a> {
         self.cursor = &self.buf[n..];
         Ok(())
     }
-    pub fn read<T: FromBytes, const S: usize>(&mut self) -> Result<T, ByteReaderError>
+    pub fn read<T: FromBytes>(&mut self) -> Result<T, ByteReaderError>
     where
-        T::Bytes: From<[u8; S]>,
+        <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
     {
-        assert_eq!(S, size_of::<T>());
         match iter::repeat_with(|| self.read_byte(true))
-            .take(S)
+            .take(size_of::<T>())
             .collect::<Result<Vec<u8>, ByteReaderError>>()
         {
-            Ok(bytes) => match bytes.as_slice().try_into() as Result<[u8; S], TryFromSliceError> {
+            Ok(bytes) => match bytes.as_slice().try_into()
+                as Result<[u8; size_of::<T>()], TryFromSliceError>
+            {
                 Ok(raw_bytes) => Ok(if self.endianness == Endianness::Little {
                     T::from_le_bytes(&raw_bytes.into())
                 } else {
@@ -105,16 +118,17 @@ impl<'a> ByteReader<'a> {
             Err(e) => Err(e),
         }
     }
-    pub fn peek<T: FromBytes, const S: usize>(&mut self) -> Result<T, ByteReaderError>
+    pub fn peek<T: FromBytes>(&mut self) -> Result<T, ByteReaderError>
     where
-        T::Bytes: From<[u8; S]>,
+        <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
     {
-        assert_eq!(S, size_of::<T>());
         match iter::repeat_with(|| self.read_byte(false))
-            .take(S)
+            .take(size_of::<T>())
             .collect::<Result<Vec<u8>, ByteReaderError>>()
         {
-            Ok(bytes) => match bytes.as_slice().try_into() as Result<[u8; S], TryFromSliceError> {
+            Ok(bytes) => match bytes.as_slice().try_into()
+                as Result<[u8; size_of::<T>()], TryFromSliceError>
+            {
                 Ok(raw_bytes) => Ok(if self.endianness == Endianness::Little {
                     T::from_le_bytes(&raw_bytes.into())
                 } else {
@@ -125,22 +139,35 @@ impl<'a> ByteReader<'a> {
             Err(e) => Err(e),
         }
     }
-    pub fn read_n<T: FromBytes, const S: usize>(
-        &mut self,
-        n: usize,
-    ) -> Result<Vec<T>, ByteReaderError>
+    pub fn read_n<T: FromBytes>(&mut self, n: usize) -> Result<Vec<T>, ByteReaderError>
     where
-        T::Bytes: From<[u8; S]>,
+        <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
     {
-        iter::repeat_with(|| self.read::<T, S>())
+        iter::repeat_with(|| self.read::<T>())
             .take(n)
             .collect::<Result<Vec<T>, ByteReaderError>>()
     }
     pub fn read_vec<T: FromBytes, const S: usize>(&mut self) -> Result<Vec<T>, ByteReaderError>
     where
-        T::Bytes: From<[u8; S]>,
+        <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
     {
-        let size = self.read::<u32, 4>()? as usize;
-        self.read_n::<T, S>(size)
+        let size = self.read::<u32>()? as usize;
+        self.read_n::<T>(size)
+    }
+}
+
+struct ByteReaderIterator<'a, T: FromBytes> {
+    buf: &'a mut ByteReader<'a>,
+    resource_type: PhantomData<T>,
+}
+
+impl<'a, T: FromBytes> Iterator for ByteReaderIterator<'a, T>
+where
+    <T as FromBytes>::Bytes: From<[u8; size_of::<T>()]>,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.buf.read::<T>().ok()
     }
 }
