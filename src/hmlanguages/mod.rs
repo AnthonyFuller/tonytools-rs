@@ -4,6 +4,9 @@ use crate::util::bytereader::ByteReaderError;
 
 pub mod hashlist;
 pub mod locr;
+pub mod ditl;
+pub mod clng;
+pub mod dlge;
 
 #[derive(Debug)]
 pub enum LangError {
@@ -13,6 +16,7 @@ pub enum LangError {
     UnsupportedVersion,
     ByteReaderError(ByteReaderError),
     Utf8Error(FromUtf8Error),
+    InvalidContainer(u8),
 }
 
 impl From<ByteReaderError> for LangError {

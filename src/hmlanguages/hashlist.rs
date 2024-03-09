@@ -33,36 +33,36 @@ impl HashList {
         };
 
         // Magic
-        match buf.read::<u32, 4>() {
+        match buf.read::<u32>() {
             Ok(0x414C4D48) => {}
             Ok(_) => return Err(HashListError::InvalidFile),
             Err(e) => return Err(HashListError::ReaderError(e)),
         };
 
         // Version
-        hashlist.version = buf.read::<u32, 4>()?;
+        hashlist.version = buf.read::<u32>()?;
 
         // Checksum
-        let checksum = buf.read::<u32, 4>()?;
+        let checksum = buf.read::<u32>()?;
         if checksum != crc32fast::hash(buf.cursor) {
             return Err(HashListError::InvalidChecksum);
         }
 
         // Soundtags
-        for _ in 0..buf.read::<u32, 4>()? {
-            hashlist.tags.insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
+        for _ in 0..buf.read::<u32>()? {
+            hashlist.tags.insert(buf.read::<u32>()?, buf.read_cstr()?);
         }
 
         // Switches
-        for _ in 0..buf.read::<u32, 4>()? {
+        for _ in 0..buf.read::<u32>()? {
             hashlist
                 .switches
-                .insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
+                .insert(buf.read::<u32>()?, buf.read_cstr()?);
         }
 
         // Lines
-        for _ in 0..buf.read::<u32, 4>()? {
-            hashlist.lines.insert(buf.read::<u32, 4>()?, buf.read_cstr()?);
+        for _ in 0..buf.read::<u32>()? {
+            hashlist.lines.insert(buf.read::<u32>()?, buf.read_cstr()?);
         }
 
         return Ok(hashlist);
