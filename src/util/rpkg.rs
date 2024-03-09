@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use regex::Regex;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResourceMeta {
@@ -15,8 +16,13 @@ pub struct ResourceMeta {
     pub hash_path: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ResourceDependency {
     pub hash: String,
     pub flag: String,
+}
+
+pub fn is_valid_hash(hash: &str) -> bool {
+    let re = Regex::new(r"^[0-9A-F]{16}$").unwrap();
+    return re.is_match(hash);
 }

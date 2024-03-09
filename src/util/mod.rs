@@ -1,2 +1,2 @@
 pub mod bytereader;
-pub mod rpkg_structs;
+pub mod rpkg;
