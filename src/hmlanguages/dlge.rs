@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::ptr::null;
-
 use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
@@ -12,14 +9,13 @@ use extended_tea::XTEA;
 use indexmap::{indexmap, IndexMap};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{json, Map};
 
 const XTEA: Lazy<XTEA> =
     Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DlgeJson {
     #[serde(rename = "$schema")]
     schema: String,
@@ -32,7 +28,7 @@ pub struct DlgeJson {
     root: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WavFile {
     #[serde(rename = "wavName")]
     wav_name: String,
@@ -46,13 +42,13 @@ pub struct WavFile {
     languages: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Random {
     cases: Option<Vec<String>>,
     containers: Vec<DlgeType>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Switch {
     #[serde(rename = "switchKey")]
     switch_key: String,
@@ -60,12 +56,12 @@ pub struct Switch {
     containers: Vec<DlgeType>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Sequence {
     containers: Vec<DlgeType>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum DlgeType {
     WavFile(WavFile),
@@ -102,13 +98,13 @@ impl Container {
             r#type: buf.read::<u8>()?,
             group_hash: buf.read::<u32>()?,
             default_hash: buf.read::<u32>()?,
-            metadata: vec![]
+            metadata: vec![],
         };
 
         for _ in 0..buf.read::<u32>()? {
             container.metadata.push(Metadata {
                 type_index: buf.read::<u16>()?,
-                hashes: buf.read_vec::<u32>()?
+                hashes: buf.read_vec::<u32>()?,
             })
         }
 
@@ -118,10 +114,10 @@ impl Container {
 
 #[derive(Default)]
 struct ContainerMap {
-    wav: IndexMap<u32, WavFile>,
-    random: IndexMap<u32, Random>,
-    switch: IndexMap<u32, Switch>,
-    sequence: IndexMap<u32, Sequence>,
+    wav: IndexMap<usize, WavFile>,
+    random: IndexMap<usize, Random>,
+    switch: IndexMap<usize, Switch>,
+    sequence: IndexMap<usize, Sequence>,
 }
 
 fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
@@ -129,12 +125,11 @@ fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
         return format!("{:08X}", hash);
     }
 
-    let wav = Regex::new(r"([^\/]*(?=\.wav))").unwrap();
-    let ffx = Regex::new(r"([^\/]*(?=\.animset))").unwrap();
+    let r = Regex::new(r"\/([^\/]+)_\.wav").unwrap();
 
-    match wav.find(wav_hash) {
+    match r.find(wav_hash) {
         Some(hash) => hash.as_str().into(),
-        None => match ffx.find(&ffx_hash) {
+        None => match r.find(&ffx_hash) {
             Some(hash) => hash.as_str().into(),
             None => format!("{:08X}", hash),
         },
@@ -222,9 +217,9 @@ impl DLGE {
 
         // Weirdly, sequences reference by some "global id" for certain types so we store this here.
         let mut global_index: u32 = u32::MAX;
-        let mut globals: HashMap<u32, u32> = HashMap::new();
+        let mut globals: IndexMap<u32, usize> = IndexMap::new();
 
-        while buf.cursor() != (buf.len() - 2) {
+        while buf.cursor.len() != 2 {
             match buf.peek::<u8>()? {
                 0x01 => {
                     buf.seek(buf.cursor() + 1)?;
@@ -262,19 +257,10 @@ impl DLGE {
 
                         if wav_index != u32::MAX && ffx_index != u32::MAX {
                             if *language == self.default_locale {
-                                wav.default_wav = meta
-                                    .hash_reference_data
-                                    .get(wav_index as usize)
-                                    .unwrap()
-                                    .clone()
-                                    .hash;
-
-                                wav.default_ffx = meta
-                                    .hash_reference_data
-                                    .get(ffx_index as usize)
-                                    .unwrap()
-                                    .clone()
-                                    .hash;
+                                wav.default_wav =
+                                    meta.hash_reference_data[wav_index as usize].hash.clone();
+                                wav.default_ffx =
+                                    meta.hash_reference_data[ffx_index as usize].hash.clone();
 
                                 wav.wav_name =
                                     get_wav_name(&wav.default_wav, &wav.default_ffx, wav_hash);
@@ -303,6 +289,7 @@ impl DLGE {
                             XTEA.decipher_u8slice::<LE>(&str_data, &mut out_data);
                             let data: serde_json::Value = String::from_utf8(out_data)?
                                 .trim_matches(char::from(0))
+                                .to_string()
                                 .into();
 
                             if subtitle.is_null() {
@@ -319,14 +306,14 @@ impl DLGE {
                         }
                     }
 
-                    containers.wav.insert(indices[0], wav);
-                    indices[0] += 1;
+                    containers.wav.insert(indices[1], wav);
+                    indices[1] += 1;
                 }
                 0x02 => {
                     let container = Container::read(buf.clone())?;
                     let mut random = Random {
                         cases: None,
-                        containers: vec![]
+                        containers: vec![],
                     };
 
                     for metadata in container.metadata {
@@ -334,15 +321,150 @@ impl DLGE {
                         let index = metadata.type_index & 0xFFF;
 
                         if r#type != 0x01 {
-                            return Err(LangError::InvalidContainer(r#type as u8));
+                            return Err(LangError::InvalidReference(r#type as u8));
+                        }
+
+                        containers.wav[index as usize].weight = match self.hex_precision {
+                            true => Some(format!("{:06X}", metadata.hashes[0]).into()),
+                            false => Some(((metadata.hashes[0] as f64) / (0xFFFFFF as f64)).into()),
+                        };
+
+                        random
+                            .containers
+                            .push(DlgeType::WavFile(containers.wav[index as usize].clone()));
+                        containers.wav.shift_remove(&(index as usize));
+                    }
+
+                    containers.random.insert(indices[2], random);
+                    global_index += 1;
+                    globals[&global_index] = indices[2];
+                    indices[2] += 1;
+                }
+                0x03 => {
+                    let container = Container::read(buf.clone())?;
+                    let mut switch = Switch {
+                        switch_key: self
+                            .hashlist
+                            .tags
+                            .get_by_left(&container.group_hash)
+                            .unwrap_or(&format!("{:08X}", container.group_hash))
+                            .clone(),
+                        default: self
+                            .hashlist
+                            .switches
+                            .get_by_left(&container.default_hash)
+                            .unwrap_or(&format!("{:08X}", container.default_hash))
+                            .clone(),
+                        containers: vec![],
+                    };
+
+                    for metadata in container.metadata {
+                        // Switch containers will ONLY EVER CONTAIN references to random containers. And there will only ever be 1 per DLGE.
+                        // But, they may contain more than one entry (or no entries) in the "SwitchHashes" array.
+                        // This has been verified across all games. This, again, makes sense when considering the purposes of each container.
+                        // But, we allow WavFile references in HMLT as they make sense, but currently it's unknown if the game allows for this.
+
+                        let r#type = metadata.type_index >> 12;
+                        let index = metadata.type_index & 0xFFF;
+
+                        if r#type != 0x01 && r#type != 0x02 {
+                            return Err(LangError::InvalidReference(r#type as u8));
+                        }
+
+                        let mut cases: Vec<String> = vec![];
+                        for hash in metadata.hashes {
+                            cases.push(
+                                self.hashlist
+                                    .switches
+                                    .get_by_left(&hash)
+                                    .unwrap_or(&format!("{:08X}", hash))
+                                    .clone(),
+                            )
+                        }
+
+                        match r#type {
+                            0x01 => {
+                                containers.wav[index as usize].cases = cases.into();
+                                switch.containers.push(DlgeType::WavFile(
+                                    containers.wav[index as usize].clone(),
+                                ));
+                                containers.wav.shift_remove(&(index as usize));
+                            }
+                            0x02 => {
+                                containers.random[index as usize].cases = cases.into();
+                                switch.containers.push(DlgeType::Random(
+                                    containers.random[index as usize].clone(),
+                                ));
+                                containers.random.shift_remove(&(index as usize));
+                            }
+                            _ => {}
                         }
                     }
+
+                    containers.switch.insert(indices[3], switch);
+                    global_index += 1;
+                    globals[&global_index] = indices[3];
+                    indices[3] += 1;
                 }
-                0x03 => {}
-                0x04 => {}
+                0x04 => {
+                    // Sequence containers can contain any of the containers apart from sequence containers of course.
+                    // Unsure if this is a hard limitation, or if they've just not used any.
+                    // Further testing required. (Although if it is a limitation, this is logical).
+                    let container = Container::read(buf.clone())?;
+                    let mut sequence = Sequence { containers: vec![] };
+
+                    for metadata in container.metadata {
+                        let r#type = metadata.type_index >> 12;
+                        if r#type == 0x04 {
+                            return Err(LangError::InvalidReference(r#type as u8));
+                        }
+
+                        let index = match r#type {
+                            0x02 | 0x03 => globals[&((metadata.type_index & 0xFFF) as u32)],
+                            _ => (metadata.type_index & 0xFFF) as usize,
+                        };
+
+                        match r#type {
+                            0x01 => {
+                                sequence
+                                    .containers
+                                    .push(DlgeType::WavFile(containers.wav[index].clone()));
+                                containers.wav.shift_remove(&index);
+                            }
+                            0x02 => {
+                                sequence
+                                    .containers
+                                    .push(DlgeType::Random(containers.random[index].clone()));
+                                containers.random.shift_remove(&index);
+                            }
+                            0x03 => {
+                                sequence
+                                    .containers
+                                    .push(DlgeType::Switch(containers.switch[index].clone()));
+                                containers.switch.shift_remove(&index);
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    containers.sequence.insert(indices[4], sequence);
+                    indices[4] += 1;
+                }
                 n => return Err(LangError::InvalidContainer(n)),
             }
         }
+
+        let root = buf.read::<u16>()?;
+        let root_type = root >> 12;
+        let root_index = (root & 0xFFF) as usize;
+
+        j.root = serde_json::to_value(match root_type {
+            0x01 => DlgeType::WavFile(containers.wav[root_index].clone()),
+            0x02 => DlgeType::Random(containers.random[root_index].clone()),
+            0x03 => DlgeType::Switch(containers.switch[root_index].clone()),
+            0x04 => DlgeType::Sequence(containers.sequence[root_index].clone()),
+            n => return Err(LangError::InvalidContainer(n as u8)),
+        })?;
 
         Ok(j)
     }

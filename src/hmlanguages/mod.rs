@@ -17,6 +17,7 @@ pub enum LangError {
     ByteReaderError(ByteReaderError),
     Utf8Error(FromUtf8Error),
     InvalidContainer(u8),
+    InvalidReference(u8),
 }
 
 impl From<ByteReaderError> for LangError {
