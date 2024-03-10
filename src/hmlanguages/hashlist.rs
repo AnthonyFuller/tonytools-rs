@@ -1,5 +1,6 @@
+use crate::util::bytereader::{ByteReader, ByteReaderError};
+use crate::util::transmutable::Endianness;
 use bimap::BiMap;
-use crate::util::bytereader::{ByteReader, ByteReaderError, Endianness};
 
 pub struct HashList {
     pub tags: BiMap<u32, String>,
@@ -50,19 +51,23 @@ impl HashList {
 
         // Soundtags
         for _ in 0..buf.read::<u32>()? {
-            hashlist.tags.insert(buf.read::<u32>()?, buf.read_cstr()?);
+            hashlist
+                .tags
+                .insert(buf.read::<u32>()?, buf.read::<String>()?);
         }
 
         // Switches
         for _ in 0..buf.read::<u32>()? {
             hashlist
                 .switches
-                .insert(buf.read::<u32>()?, buf.read_cstr()?);
+                .insert(buf.read::<u32>()?, buf.read::<String>()?);
         }
 
         // Lines
         for _ in 0..buf.read::<u32>()? {
-            hashlist.lines.insert(buf.read::<u32>()?, buf.read_cstr()?);
+            hashlist
+                .lines
+                .insert(buf.read::<u32>()?, buf.read::<String>()?);
         }
 
         return Ok(hashlist);
@@ -89,12 +94,7 @@ fn test_hash_list() -> Result<(), std::io::Error> {
             .get_by_right("EVERGREEN_SETPIECES_GEARWALL_ITEM_GEARCAPACITYCOST_DESCRIPTION")
     );
 
-    println!(
-        "{:?}",
-        hashlist
-            .lines
-            .get_by_left(&18554)
-    );
+    println!("{:?}", hashlist.lines.get_by_left(&18554));
 
     Ok(())
 }

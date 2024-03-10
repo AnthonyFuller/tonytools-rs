@@ -1,12 +1,11 @@
 use crate::util::transmutable::{Endianness, ToBytes};
 
-
 #[derive(Debug)]
 pub enum ByteWriterError {
     Fail,
 }
-// T::Bytes: Into<Vec<u8>> 
-pub trait ByteWriterResource = ToBytes<Bytes=Vec<u8>>;
+// T::Bytes: Into<Vec<u8>>
+pub trait ByteWriterResource = ToBytes<Bytes = Vec<u8>>;
 pub struct ByteWriter {
     buf: Vec<u8>,
     endianness: Endianness,
@@ -16,7 +15,7 @@ impl ByteWriter {
     pub fn new(endianness: Endianness) -> Self {
         ByteWriter {
             buf: Vec::new(),
-            endianness
+            endianness,
         }
     }
     pub fn append<T: ByteWriterResource>(&mut self, data: T) -> usize {
@@ -24,8 +23,11 @@ impl ByteWriter {
         self.buf.append(&mut buf);
         buf.len()
     }
-    pub fn write<T: ByteWriterResource>(&mut self, data: T, pos: usize) -> Result<usize, ByteWriterError>
-    {
+    pub fn write<T: ByteWriterResource>(
+        &mut self,
+        data: T,
+        pos: usize,
+    ) -> Result<usize, ByteWriterError> {
         let buf = data.to_bytes(self.endianness);
         let size = buf.len();
         for i in 0..size {
@@ -39,9 +41,9 @@ impl ByteWriter {
     }
 }
 
+use super::bytereader::ByteReader;
 #[cfg(test)]
 use super::transmutable::ByteError;
-use super::bytereader::ByteReader;
 #[test]
 fn test_bytewriter() -> Result<(), ByteError> {
     let mut writer = ByteWriter::new(Endianness::default());

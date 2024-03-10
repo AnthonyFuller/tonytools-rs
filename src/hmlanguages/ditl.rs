@@ -3,8 +3,9 @@ use serde_json::Map;
 
 use super::hashlist::HashList;
 use super::{LangError, LangResult, Rebuilt};
-use crate::util::bytereader::{ByteReader, Endianness};
+use crate::util::bytereader::ByteReader;
 use crate::util::rpkg;
+use crate::util::transmutable::Endianness;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DitlJson {
@@ -40,7 +41,11 @@ impl DITL {
         for i in (0..hashes.len()).step_by(2) {
             let index = *hashes.get(i).unwrap();
             let hash = *hashes.get(i + 1).unwrap();
-            let depend = meta.hash_reference_data.get(index as usize).unwrap().clone();
+            let depend = meta
+                .hash_reference_data
+                .get(index as usize)
+                .unwrap()
+                .clone();
             let hex: String = format!("{:08X}", hash);
             let hash = self.hashlist.tags.get_by_left(&hash).unwrap_or(&hex);
             j.soundtags[hash] = depend.hash.into();

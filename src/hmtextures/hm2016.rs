@@ -4,8 +4,8 @@ use crate::{
     hmtextures::{self, Format, Type},
     util::{
         bytereader::{ByteReader, ByteReaderError, ByteReaderErrorKind},
-        transmutable::Endianness
-    }
+        transmutable::Endianness,
+    },
 };
 #[derive(Default, Debug)]
 struct Texture {
@@ -21,7 +21,6 @@ struct Texture {
     pub atlas_offset: u32,
 
     pub mips_datasizes: [u32; 0xE],
-
     // pub pixels: Vec<u8>,
 }
 
@@ -84,7 +83,9 @@ impl Texture {
         {
             texture.mips_datasizes = mds;
         } else {
-            return Err(hmtextures::Error::ByteReaderError(buf.err(ByteReaderErrorKind::NoBytes)));
+            return Err(hmtextures::Error::ByteReaderError(
+                buf.err(ByteReaderErrorKind::NoBytes),
+            ));
         };
 
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {

@@ -2,11 +2,11 @@ use std::string::FromUtf8Error;
 
 use crate::util::bytereader::ByteReaderError;
 
+pub mod clng;
+pub mod ditl;
+pub mod dlge;
 pub mod hashlist;
 pub mod locr;
-pub mod ditl;
-pub mod clng;
-pub mod dlge;
 
 #[derive(Debug)]
 pub enum LangError {

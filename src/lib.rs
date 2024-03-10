@@ -1,4 +1,10 @@
-#![feature(generic_const_exprs, associated_type_defaults, negative_impls, trait_alias, debug_closure_helpers)]
+#![feature(
+    generic_const_exprs,
+    associated_type_defaults,
+    negative_impls,
+    trait_alias,
+    debug_closure_helpers
+)]
 pub mod hmlanguages;
 pub mod hmtextures;
 pub mod util;

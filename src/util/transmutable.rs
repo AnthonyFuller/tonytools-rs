@@ -3,7 +3,7 @@ use std::{mem::size_of, string::FromUtf8Error};
 
 use num::traits;
 
-use super::{bytereader::{ByteReader, ByteReaderError}, bytewriter::ByteWriterError};
+use super::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
 
 #[derive(PartialEq, Clone, Copy, Default)]
 pub enum Endianness {
@@ -85,7 +85,7 @@ impl TryFromBytes for String {
         }
         let res = String::from_utf8(vec)?;
         let len = res.len();
-        Ok((res, len+1))
+        Ok((res, len + 1))
     }
 }
 
@@ -132,14 +132,14 @@ impl ToBytes for String {
     type Bytes = Vec<u8>;
 
     fn to_bytes(&self, _: Endianness) -> Self::Bytes {
-        String::from(self.to_owned()+"\0").to_owned().into()
+        String::from(self.to_owned() + "\0").to_owned().into()
     }
 }
 
 #[derive(Debug)]
 pub enum ByteError {
     ByteReaderError(ByteReaderError),
-    ByteWriterError(ByteWriterError)
+    ByteWriterError(ByteWriterError),
 }
 
 impl From<ByteReaderError> for ByteError {

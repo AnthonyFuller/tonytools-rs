@@ -1,8 +1,9 @@
 use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
-use crate::util::bytereader::{ByteReader, Endianness};
+use crate::util::bytereader::ByteReader;
 use crate::util::rpkg;
+use crate::util::transmutable::Endianness;
 use crate::Version;
 use byteorder::LE;
 use extended_tea::XTEA;
@@ -65,7 +66,11 @@ impl LOCR {
                 _ => return Err(LangError::UnsupportedVersion),
             }
         } else {
-            lang_map.unwrap().split(",").map(|s| s.to_string()).collect()
+            lang_map
+                .unwrap()
+                .split(",")
+                .map(|s| s.to_string())
+                .collect()
         };
 
         Ok(LOCR {

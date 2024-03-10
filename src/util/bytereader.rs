@@ -7,7 +7,10 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::{hmtextures::hm2016, util::transmutable::{Endianness, TryFromBytes, TryFromBytesError}};
+use crate::{
+    hmtextures::hm2016,
+    util::transmutable::{Endianness, TryFromBytes, TryFromBytesError},
+};
 pub trait ByteReaderResource = TryFromBytes<Bytes = Vec<u8>, Error = TryFromBytesError>;
 /// Error returned by ByteReader
 pub struct ByteReaderError {
@@ -20,7 +23,7 @@ impl std::fmt::Debug for ByteReaderError {
         f.debug_struct("ByteReaderError")
             .field("kind", &self.kind)
             .field_with("cursor", |f| write!(f, "{:#x}", &self.cursor))
-            .finish()   
+            .finish()
     }
 }
 #[derive(Debug)]
@@ -70,11 +73,10 @@ pub struct ByteReader<'a> {
 }
 
 impl<'a> ByteReader<'a> {
-
     /// Returns a ByteReaderError with the context of the ByteReader
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `kind` - the kind of error to receive
     pub fn err(&self, kind: ByteReaderErrorKind) -> ByteReaderError {
         ByteReaderError {
@@ -152,19 +154,6 @@ impl<'a> ByteReader<'a> {
         res
     }
 
-    // would like this to be read::<&str>() and read::<std::string>()
-    pub fn read_cstr(&mut self) -> Result<String, ByteReaderError> {
-        let mut vec: Vec<u8> = Vec::new();
-        loop {
-            let a = self.read_byte()?;
-            if a == 0x00 {
-                return String::from_utf8(vec).map_err(|_| self.err(ByteReaderErrorKind::NoBytes));
-            } else {
-                vec.push(a);
-            }
-        }
-    }
-
     /// Returns the length of the remaining buffer
     pub fn len(&self) -> usize {
         self.cursor.len()
@@ -216,15 +205,11 @@ impl<'a> ByteReader<'a> {
     /// // only reads 2 bytes!
     /// let next_value = reader.read::<u16>()? as u32;
     /// ```
-    pub fn read<T: ByteReaderResource>(&mut self) -> Result<T, ByteReaderError>
-    {
-        let (v, s) = T::try_from_bytes(
-            self.cursor.to_vec(),
-            self.endianness,
-        ).map_err(|e| self.err(ByteReaderErrorKind::TryFromBytesError(e)))?;
+    pub fn read<T: ByteReaderResource>(&mut self) -> Result<T, ByteReaderError> {
+        let (v, s) = T::try_from_bytes(self.cursor.to_vec(), self.endianness)
+            .map_err(|e| self.err(ByteReaderErrorKind::TryFromBytesError(e)))?;
         self.consume(s);
         Ok(v)
-
     }
 
     /// Reads a type T from the buffer
@@ -246,8 +231,7 @@ impl<'a> ByteReader<'a> {
     /// // does consume the next 4 bytes!
     /// let [first_half, second_half] = [reader.read::<u16>()? as u32, reader.read::<u16>()? as u32];
     /// ```
-    pub fn peek<T: ByteReaderResource>(&mut self) -> Result<T, ByteReaderError>
-    {
+    pub fn peek<T: ByteReaderResource>(&mut self) -> Result<T, ByteReaderError> {
         let here = self.cursor;
         let res = self.read::<T>();
         self.cursor = here;
@@ -271,14 +255,13 @@ impl<'a> ByteReader<'a> {
     /// // read 32 bytes (or 16 u16s)
     /// let values = reader.read_n::<u16>(16)?;
     /// ```
-    pub fn read_n<T: ByteReaderResource>(&mut self, n: usize) -> Result<Vec<T>, ByteReaderError>
-    {
+    pub fn read_n<T: ByteReaderResource>(&mut self, n: usize) -> Result<Vec<T>, ByteReaderError> {
         iter::repeat_with(|| self.read::<T>())
             .take(n)
             .collect::<Result<Vec<T>, ByteReaderError>>()
     }
 
-        /// Reads a type T from the buffer n times without consuming
+    /// Reads a type T from the buffer n times without consuming
     ///
     /// # Arguments
     ///
@@ -296,8 +279,7 @@ impl<'a> ByteReader<'a> {
     /// // read 32 bytes (or 16 u16s)
     /// let values = reader.read_n::<u16>(16)?;
     /// ```
-    pub fn peek_n<T: ByteReaderResource>(&mut self, n: usize) -> Result<Vec<T>, ByteReaderError>
-    {
+    pub fn peek_n<T: ByteReaderResource>(&mut self, n: usize) -> Result<Vec<T>, ByteReaderError> {
         let cursor = self.cursor;
         let res = self.read_n::<T>(n);
         self.cursor = cursor;
@@ -305,8 +287,7 @@ impl<'a> ByteReader<'a> {
     }
 
     // could be renamed read_sized_vec
-    pub fn read_vec<T: ByteReaderResource>(&mut self) -> Result<Vec<T>, ByteReaderError>
-    {
+    pub fn read_vec<T: ByteReaderResource>(&mut self) -> Result<Vec<T>, ByteReaderError> {
         let size = self.read::<u32>()? as usize;
         self.read_n::<T>(size)
     }
@@ -333,8 +314,7 @@ pub struct ByteReaderIterator<'a, T: TryFromBytes> {
     resource_type: PhantomData<T>,
 }
 
-impl<'a, T: ByteReaderResource> Iterator for ByteReaderIterator<'a, T>
-{
+impl<'a, T: ByteReaderResource> Iterator for ByteReaderIterator<'a, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -344,6 +324,5 @@ impl<'a, T: ByteReaderResource> Iterator for ByteReaderIterator<'a, T>
 
 #[test]
 fn test_bytereader() -> Result<(), ByteReaderError> {
-    
     Ok(())
 }

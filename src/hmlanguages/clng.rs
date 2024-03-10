@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use super::{LangError, LangResult, Rebuilt};
-use crate::util::bytereader::{ByteReader, Endianness};
+use crate::util::bytereader::ByteReader;
 use crate::util::rpkg;
+use crate::util::transmutable::Endianness;
 use crate::{vec_of_strings, Version};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -31,7 +32,11 @@ impl CLNG {
                 _ => return Err(LangError::UnsupportedVersion),
             }
         } else {
-            lang_map.unwrap().split(",").map(|s| s.to_string()).collect()
+            lang_map
+                .unwrap()
+                .split(",")
+                .map(|s| s.to_string())
+                .collect()
         };
 
         Ok(CLNG { lang_map })
@@ -43,7 +48,7 @@ impl CLNG {
         let mut j = ClngJson {
             schema: "https://tonytools.win/schemas/clng.schema.json".into(),
             hash: "".into(),
-            languages: Map::new().into()
+            languages: Map::new().into(),
         };
 
         let bools = buf.read_n::<u8>(buf.len())?;

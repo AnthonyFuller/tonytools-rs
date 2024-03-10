@@ -1,8 +1,9 @@
 use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
-use crate::util::bytereader::{ByteReader, Endianness};
+use crate::util::bytereader::ByteReader;
 use crate::util::rpkg::{self, is_valid_hash};
+use crate::util::transmutable::Endianness;
 use crate::Version;
 use byteorder::LE;
 use extended_tea::XTEA;
