@@ -32,7 +32,9 @@ pub struct DlgeJson {
 pub struct WavFile {
     #[serde(rename = "wavName")]
     wav_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     cases: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     weight: Option<serde_json::Value>,
     soundtag: String,
     #[serde(rename = "defaultWav")]
@@ -179,16 +181,13 @@ impl DLGE {
     pub fn convert(&self, data: &[u8], meta_json: String) -> LangResult<DlgeJson> {
         let mut buf = ByteReader::new(data, Endianness::Little);
 
-        let mut j: DlgeJson = serde_json::from_str(
-            r#"{
-            "$schema": "https://tonytools.win/schemas/dlge.schema.json",
-            "hash": "",
-            "DITL": "",
-            "CLNG": "",
-            "rootContainer": null
-        }"#,
-        )
-        .expect("Something has gone horribly wrong.");
+        let mut j = DlgeJson {
+            schema: "https://tonytools.win/schemas/dlge.schema.json".into(),
+            hash: "".into(),
+            ditl: "".into(),
+            clng: "".into(),
+            root: serde_json::Value::Null,
+        };
 
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;
         j.hash = meta.hash_path.unwrap_or(meta.hash_value);
