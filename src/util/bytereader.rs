@@ -344,5 +344,6 @@ impl<'a, T: ByteReaderResource> Iterator for ByteReaderIterator<'a, T>
 
 #[test]
 fn test_bytereader() -> Result<(), ByteReaderError> {
+    
     Ok(())
 }
