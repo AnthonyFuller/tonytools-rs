@@ -1,5 +1,5 @@
 //! transmutable.rs
-use std::{mem::size_of, string::FromUtf8Error};
+use std::{io, mem::size_of, string::FromUtf8Error};
 
 use num::traits;
 
@@ -140,6 +140,7 @@ impl ToBytes for String {
 pub enum ByteError {
     ByteReaderError(ByteReaderError),
     ByteWriterError(ByteWriterError),
+    IOError(io::Error)
 }
 
 impl From<ByteReaderError> for ByteError {
@@ -151,5 +152,11 @@ impl From<ByteReaderError> for ByteError {
 impl From<ByteWriterError> for ByteError {
     fn from(err: ByteWriterError) -> Self {
         Self::ByteWriterError(err)
+    }
+}
+
+impl From<io::Error> for ByteError {
+    fn from(err: io::Error) -> Self {
+        Self::IOError(err)
     }
 }

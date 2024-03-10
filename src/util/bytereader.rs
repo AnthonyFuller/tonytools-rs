@@ -7,10 +7,9 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::{
-    hmtextures::hm2016,
-    util::transmutable::{Endianness, TryFromBytes, TryFromBytesError},
-};
+use crate::util::transmutable::{Endianness, TryFromBytes, TryFromBytesError};
+
+
 pub trait ByteReaderResource = TryFromBytes<Bytes = Vec<u8>, Error = TryFromBytesError>;
 /// Error returned by ByteReader
 pub struct ByteReaderError {
@@ -126,32 +125,6 @@ impl<'a> ByteReader<'a> {
             buf: self,
             resource_type: PhantomData,
         }
-    }
-
-    /// Peeks one byte into the buffer without consuming it
-    fn peek_byte(&self) -> Result<u8, ByteReaderError> {
-        self.cursor
-            .first()
-            .ok_or(self.err(ByteReaderErrorKind::NoBytes))
-            .copied()
-    }
-    /// Reads one byte from the buffer, consuming it
-    ///
-    /// # Examples
-    /// ```
-    /// use crate::util::bytereader;
-    /// let buf = std::fs::read("binary.file")?.as_slice();
-    /// let reader = ByteReader::new(buf, Endianness::Little);
-    /// let first: u8 = reader.peek_byte()?;
-    /// ```
-    fn read_byte(&mut self) -> Result<u8, ByteReaderError> {
-        let res = self
-            .cursor
-            .first()
-            .ok_or(self.err(ByteReaderErrorKind::NoBytes))
-            .copied();
-        self.consume(1);
-        res
     }
 
     /// Returns the length of the remaining buffer
@@ -322,7 +295,37 @@ impl<'a, T: ByteReaderResource> Iterator for ByteReaderIterator<'a, T> {
     }
 }
 
+#[cfg(test)]
+use super::transmutable::ByteError;
+
 #[test]
-fn test_bytereader() -> Result<(), ByteReaderError> {
+fn test_bytereader() -> Result<(), ByteError> {
+    let data = std::fs::read("texture.text")?;
+    let mut reader = ByteReader::new(&data, Endianness::default());
+    assert_eq!(reader.read::<u16>()?, 1);
+    assert_eq!(reader.read::<u16>()?, 0);
+    assert_eq!(reader.read::<u32>()?, 0x4000);
+    assert_eq!(reader.read::<u32>()?, 0x2B0C);
+    assert_eq!(reader.read::<u32>()?, 0);
+    assert_eq!(reader.read::<u16>()?, 0x0080);
+    assert_eq!(reader.read::<u16>()?, 0x0080);
+    assert_eq!(reader.read::<u16>()?, 0x0049);
+    reader.seek(0x1c)?;
+    assert_eq!(reader.read_n::<u32>(14)?, vec![
+        8192,
+        10240,
+        10752,
+        10880,
+        10912,
+        10920,
+        10928,
+        10936,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]);
     Ok(())
 }

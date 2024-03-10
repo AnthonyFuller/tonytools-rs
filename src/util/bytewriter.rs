@@ -41,6 +41,7 @@ impl ByteWriter {
     }
 }
 
+#[cfg(test)]
 use super::bytereader::ByteReader;
 #[cfg(test)]
 use super::transmutable::ByteError;
