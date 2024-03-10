@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Map;
 
 use super::{LangError, LangResult, Rebuilt};
 use crate::util::bytereader::{ByteReader, Endianness};
@@ -39,14 +40,11 @@ impl CLNG {
     pub fn convert(&self, data: &[u8], meta_json: String) -> LangResult<ClngJson> {
         let mut buf = ByteReader::new(data, Endianness::Little);
 
-        let mut j: ClngJson = serde_json::from_str(
-            r#"{
-            "$schema": "https://tonytools.win/schemas/clng.schema.json",
-            "hash": "",
-            "languages": {}
-        }"#,
-        )
-        .expect("Something has gone horribly wrong.");
+        let mut j = ClngJson {
+            schema: "https://tonytools.win/schemas/clng.schema.json".into(),
+            hash: "".into(),
+            languages: Map::new().into()
+        };
 
         let bools = buf.read_n::<u8>(buf.len())?;
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;

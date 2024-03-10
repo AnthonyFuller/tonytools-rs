@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Map;
 
 use super::hashlist::HashList;
 use super::{LangError, LangResult, Rebuilt};
@@ -25,14 +26,11 @@ impl DITL {
     pub fn convert(&self, data: &[u8], meta_json: String) -> LangResult<DitlJson> {
         let mut buf = ByteReader::new(data, Endianness::Little);
 
-        let mut j: DitlJson = serde_json::from_str(
-            r#"{
-            "$schema": "https://tonytools.win/schemas/ditl.schema.json",
-            "hash": "",
-            "soundtags": {}
-        }"#,
-        )
-        .expect("Something has gone horribly wrong.");
+        let mut j = DitlJson {
+            schema: "https://tonytools.win/schemas/ditl.schema.json".into(),
+            hash: "".into(),
+            soundtags: Map::new().into(),
+        };
 
         let count = buf.read::<u32>()?;
         let hashes = buf.read_n::<u32>((count * 2) as usize)?; // Hashes and depend index
