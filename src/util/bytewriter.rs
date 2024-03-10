@@ -1,29 +1,58 @@
-use std::mem::size_of;
+use crate::util::transmutable::{Endianness, ToBytes};
 
-use num::traits::ToBytes;
 
-use super::bytereader::Endianness;
-
+#[derive(Debug)]
 pub enum ByteWriterError {
     Fail,
 }
-
+// T::Bytes: Into<Vec<u8>> 
+pub trait ByteWriterResource = ToBytes<Bytes=Vec<u8>>;
 pub struct ByteWriter {
     buf: Vec<u8>,
     endianness: Endianness,
 }
 
 impl ByteWriter {
-    pub fn write<T: ToBytes>(&mut self, data: T) -> Result<(), ByteWriterError>
-    where
-        <T as ToBytes>::Bytes: Into<Vec<u8>>,
-    {
-        let mut buf: Vec<u8> = if self.endianness == Endianness::Little {
-            data.to_le_bytes().into()
-        } else {
-            data.to_be_bytes().into()
-        };
-        self.buf.append(&mut buf);
-        Ok(())
+    pub fn new(endianness: Endianness) -> Self {
+        ByteWriter {
+            buf: Vec::new(),
+            endianness
+        }
     }
+    pub fn append<T: ByteWriterResource>(&mut self, data: T) -> usize {
+        let mut buf = data.to_bytes(self.endianness);
+        self.buf.append(&mut buf);
+        buf.len()
+    }
+    pub fn write<T: ByteWriterResource>(&mut self, data: T, pos: usize) -> Result<usize, ByteWriterError>
+    {
+        let buf = data.to_bytes(self.endianness);
+        let size = buf.len();
+        for i in 0..size {
+            self.buf.insert(pos + i, buf[i]);
+        }
+        Ok(buf.len())
+    }
+
+    pub fn buf(&self) -> Vec<u8> {
+        self.buf.clone()
+    }
+}
+
+#[cfg(test)]
+use super::transmutable::ByteError;
+use super::bytereader::ByteReader;
+#[test]
+fn test_bytewriter() -> Result<(), ByteError> {
+    let mut writer = ByteWriter::new(Endianness::default());
+    writer.append::<u16>(10);
+    writer.append::<String>(String::from("testing"));
+    writer.append::<i32>(-14);
+
+    let b = writer.buf();
+    let mut reader = ByteReader::new(b.as_slice(), Endianness::default());
+    assert_eq!(reader.read::<u16>()?, 10);
+    assert_eq!(reader.read::<String>()?, String::from("testing"));
+    assert_eq!(reader.read::<i32>()?, -14);
+    Ok(())
 }

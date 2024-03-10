@@ -2,7 +2,10 @@ use std::{array::TryFromSliceError, io::BufRead};
 
 use crate::{
     hmtextures::{self, Format, Type},
-    util::bytereader::{ByteReader, ByteReaderError, Endianness},
+    util::{
+        bytereader::{ByteReader, ByteReaderError, ByteReaderErrorKind},
+        transmutable::Endianness
+    }
 };
 #[derive(Default, Debug)]
 struct Texture {
@@ -19,7 +22,7 @@ struct Texture {
 
     pub mips_datasizes: [u32; 0xE],
 
-    pub pixels: Vec<u8>,
+    // pub pixels: Vec<u8>,
 }
 
 #[derive(Default, Debug)]
@@ -81,13 +84,13 @@ impl Texture {
         {
             texture.mips_datasizes = mds;
         } else {
-            return Err(hmtextures::Error::ByteReaderError(ByteReaderError::NoBytes));
+            return Err(hmtextures::Error::ByteReaderError(buf.err(ByteReaderErrorKind::NoBytes)));
         };
 
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
-        texture.pixels = buf.fill_buf()?.to_vec();
+        // texture.pixels = buf.fill_buf()?.to_vec();
         Ok(texture)
     }
 }
@@ -97,7 +100,7 @@ pub fn convert(data: &[u8], output_path: &str, metadata_path: &str, swizzle: boo
 }
 
 #[test]
-fn test_2016() -> Result<(), hmtextures::Error> {
+fn test_hm2016() -> Result<(), hmtextures::Error> {
     let file = std::fs::read("texture.text")?;
     let texture = Texture::load(file.as_slice());
 
