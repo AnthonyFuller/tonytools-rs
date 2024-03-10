@@ -86,18 +86,15 @@ impl LOCR {
             false
         };
 
-        let mut j: LocrJson = serde_json::from_str(
-            r#"{
-            "$schema": "https://tonytools.win/schemas/locr.schema.json",
-            "hash": "",
-            "symmetric": true,
-            "languages": {}
-        }"#,
-        )
-        .expect("Something has gone horribly wrong.");
+        let mut j = LocrJson {
+            schema: "https://tonytools.win/schemas/locr.schema.json".into(),
+            hash: "".into(),
+            symmetric: None,
+            languages: Map::new().into(),
+        };
 
-        if !self.symmetric || self.version != Version::H2016 {
-            j.symmetric = None;
+        if self.symmetric && self.version == Version::H2016 {
+            j.symmetric = Some(true);
         }
 
         let cursor = buf.cursor();
