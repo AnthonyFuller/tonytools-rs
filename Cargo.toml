@@ -15,4 +15,4 @@ serde_json = { version = "1.0.114", features = ["preserve_order"] }
 extended-tea = "0.1.1"
 byteorder = "1.5.0"
 indexmap = "2.2.5"
-regex = "1.10.3"
+fancy-regex = "0.13.0"

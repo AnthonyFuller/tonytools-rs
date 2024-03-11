@@ -1,4 +1,4 @@
-use regex::Regex;
+use fancy_regex::Regex;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -24,5 +24,5 @@ pub struct ResourceDependency {
 
 pub fn is_valid_hash(hash: &str) -> bool {
     let re = Regex::new(r"^[0-9A-F]{16}$").unwrap();
-    return re.is_match(hash);
+    return re.is_match(hash).unwrap();
 }
