@@ -7,10 +7,9 @@ use super::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
 
 #[derive(PartialEq, Clone, Copy, Default)]
 pub enum Endianness {
+    #[default]
     Little,
     Big,
-    #[default]
-    Native,
 }
 
 trait TInt {}
@@ -106,7 +105,6 @@ where
             match endianness {
                 Endianness::Big => Self::from_be_bytes(array_bytes),
                 Endianness::Little => Self::from_le_bytes(array_bytes),
-                Endianness::Native => Self::from_ne_bytes(array_bytes),
             },
             size_of::<T>(),
         ))
@@ -123,7 +121,6 @@ where
         match endianness {
             Endianness::Big => self.to_be_bytes().into(),
             Endianness::Little => self.to_le_bytes().into(),
-            Endianness::Native => self.to_ne_bytes().into(),
         }
     }
 }
