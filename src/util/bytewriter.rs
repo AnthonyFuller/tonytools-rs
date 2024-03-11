@@ -37,6 +37,7 @@ impl ByteWriter {
         }
         Ok(buf.len())
     }
+    pub fn len(&self) -> usize { self.buf.len() }
     
     // could be write_sized_vec::<T>
     pub fn write_vec<T: ByteWriterResource + Clone>(&mut self, data: Vec<T>) -> usize {
