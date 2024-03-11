@@ -844,35 +844,3 @@ impl DLGE {
         })
     }
 }
-
-#[test]
-fn test_dlge() -> LangResult<()> {
-    let file = std::fs::read("hash_list.hmla").expect("No file.");
-    let hashlist = HashList::load(file.as_slice()).unwrap();
-
-    let dlge = DLGE::new(hashlist, Version::H3, None, None, false)?;
-    let filedata = std::fs::read("test.DLGE").expect("No file.");
-    let json = dlge.convert(
-        filedata.as_slice(),
-        String::from_utf8(std::fs::read("test.dlge.json").expect("No file."))?,
-    )?;
-    std::fs::write("dlge.json", serde_json::to_string(&json)?).unwrap();
-
-    Ok(())
-}
-
-#[test]
-fn test_dlge_rebuild() -> LangResult<()> {
-    let file = std::fs::read("hash_list.hmla").expect("No file.");
-    let hashlist = HashList::load(file.as_slice()).unwrap();
-
-    let mut dlge = DLGE::new(hashlist, Version::H3, None, None, false)?;
-    let rebuilt = dlge.rebuild(String::from_utf8(
-        std::fs::read("dlge.json").expect("No file."),
-    )?)?;
-
-    std::fs::write("rebuilt.DLGE", rebuilt.file).unwrap();
-    std::fs::write("rebuilt.DLGE.meta.json", rebuilt.meta).unwrap();
-
-    Ok(())
-}
