@@ -3,7 +3,7 @@ use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::bytereader::ByteReader;
 use crate::util::bytewriter::ByteWriter;
-use crate::util::rpkg::{self, is_valid_hash};
+use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
 use crate::util::transmutable::Endianness;
 use crate::Version;
 use byteorder::LE;
@@ -835,7 +835,12 @@ impl DLGE {
 
         Ok(Rebuilt {
             file: buf.buf(),
-            meta: String::from(""),
+            meta: serde_json::to_string(&ResourceMeta::new(
+                json.hash,
+                buf.len() as u32,
+                "DLGE".into(),
+                self.depends.clone(),
+            ))?,
         })
     }
 }
@@ -867,6 +872,7 @@ fn test_dlge_rebuild() -> LangResult<()> {
     )?)?;
 
     std::fs::write("rebuilt.DLGE", rebuilt.file).unwrap();
+    std::fs::write("rebuilt.DLGE.meta.json", rebuilt.meta).unwrap();
 
     Ok(())
 }
