@@ -2,14 +2,15 @@ use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::bytereader::ByteReader;
+use crate::util::bytewriter::ByteWriter;
 use crate::util::rpkg::{self, is_valid_hash};
 use crate::util::transmutable::Endianness;
 use crate::Version;
 use byteorder::LE;
 use extended_tea::XTEA;
+use fancy_regex::Regex;
 use indexmap::{indexmap, IndexMap};
 use once_cell::sync::Lazy;
-use fancy_regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
 
@@ -25,8 +26,10 @@ pub struct DlgeJson {
     ditl: String,
     #[serde(rename = "CLNG")]
     clng: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    langmap: Option<String>,
     #[serde(rename = "rootContainer")]
-    root: serde_json::Value,
+    root: DlgeType,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -42,7 +45,7 @@ pub struct WavFile {
     default_wav: String,
     #[serde(rename = "defaultFfx")]
     default_ffx: String,
-    languages: serde_json::Value,
+    languages: Map<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -71,6 +74,31 @@ pub enum DlgeType {
     Random(Random),
     Switch(Switch),
     Sequence(Sequence),
+    Null,
+}
+
+impl From<WavFile> for DlgeType {
+    fn from(v: WavFile) -> Self {
+        DlgeType::WavFile(v)
+    }
+}
+
+impl From<Random> for DlgeType {
+    fn from(v: Random) -> Self {
+        DlgeType::Random(v)
+    }
+}
+
+impl From<Switch> for DlgeType {
+    fn from(v: Switch) -> Self {
+        DlgeType::Switch(v)
+    }
+}
+
+impl From<Sequence> for DlgeType {
+    fn from(v: Sequence) -> Self {
+        DlgeType::Sequence(v)
+    }
 }
 
 pub struct DLGE {
@@ -79,8 +107,12 @@ pub struct DLGE {
     lang_map: Vec<String>,
     default_locale: String,
     hex_precision: bool,
+    custom_langmap: bool,
+    // This is used for rebuilding.
+    depends: IndexMap<String, String>,
 }
 
+#[derive(Clone)]
 struct Metadata {
     type_index: u16, // >> 12 for type -- & 0xFFF for index
     // This is actually a u32 count, then X amount of u32s but
@@ -96,7 +128,16 @@ struct Container {
 }
 
 impl Container {
-    fn read(mut buf: ByteReader) -> LangResult<Self> {
+    fn new(r#type: u8, group_hash: u32, default_hash: u32) -> Self {
+        Self {
+            r#type,
+            group_hash,
+            default_hash,
+            metadata: Vec::new(),
+        }
+    }
+
+    fn read(buf: &mut ByteReader) -> LangResult<Self> {
         let mut container = Self {
             r#type: buf.read::<u8>()?,
             group_hash: buf.read::<u32>()?,
@@ -112,6 +153,18 @@ impl Container {
         }
 
         Ok(container)
+    }
+
+    fn write(self, buf: &mut ByteWriter) {
+        buf.append(self.r#type);
+        buf.append(self.group_hash);
+        buf.append(self.default_hash);
+
+        buf.append(self.metadata.len() as u32);
+        for metadata in self.metadata {
+            buf.append(metadata.type_index);
+            buf.write_vec(metadata.hashes);
+        }
     }
 }
 
@@ -140,6 +193,19 @@ fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
     }
 }
 
+fn xtea_encrypt(str: &str) -> Vec<u8> {
+    let mut str = str.as_bytes().to_vec();
+    if str.len() % 8 != 0 {
+        str.extend(vec![0; 8 - (str.len() % 8)]);
+    }
+
+    let mut out_data = vec![0; str.len()];
+
+    XTEA.encipher_u8slice::<LE>(&str, &mut out_data);
+
+    out_data
+}
+
 impl DLGE {
     pub fn new(
         hashlist: HashList,
@@ -148,6 +214,7 @@ impl DLGE {
         default_locale: Option<String>,
         hex_precision: bool,
     ) -> LangResult<Self> {
+        let custom_langmap = lang_map.is_some();
         let lang_map = if lang_map.is_none() {
             match version {
                 Version::H2016 => vec_of_strings![
@@ -177,6 +244,8 @@ impl DLGE {
             lang_map,
             default_locale,
             hex_precision,
+            custom_langmap,
+            depends: IndexMap::new(),
         })
     }
 
@@ -188,23 +257,22 @@ impl DLGE {
             hash: "".into(),
             ditl: "".into(),
             clng: "".into(),
-            root: serde_json::Value::Null,
+            langmap: if self.custom_langmap {
+                Some(self.lang_map.join(","))
+            } else {
+                None
+            },
+            root: DlgeType::Null,
         };
 
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;
         j.hash = meta.hash_path.unwrap_or(meta.hash_value);
-        j.ditl = meta
-            .hash_reference_data
-            .get(buf.read::<u32>()? as usize)
-            .unwrap()
-            .clone()
-            .hash;
-        j.clng = meta
-            .hash_reference_data
-            .get(buf.read::<u32>()? as usize)
-            .unwrap()
-            .clone()
-            .hash;
+        j.ditl = meta.hash_reference_data[buf.read::<u32>()? as usize]
+            .hash
+            .clone();
+        j.clng = meta.hash_reference_data[buf.read::<u32>()? as usize]
+            .hash
+            .clone();
 
         // We setup these maps to store the various types of containers
         // and the latest index for final construction later.
@@ -311,7 +379,7 @@ impl DLGE {
                     indices[1] += 1;
                 }
                 0x02 => {
-                    let container = Container::read(buf.clone())?;
+                    let container = Container::read(&mut buf)?;
                     let mut random = Random {
                         cases: None,
                         containers: vec![],
@@ -332,7 +400,7 @@ impl DLGE {
 
                         random
                             .containers
-                            .push(DlgeType::WavFile(containers.wav[index as usize].clone()));
+                            .push(containers.wav[index as usize].clone().into());
                         containers.wav.shift_remove(&(index as usize));
                     }
 
@@ -342,7 +410,7 @@ impl DLGE {
                     indices[2] += 1;
                 }
                 0x03 => {
-                    let container = Container::read(buf.clone())?;
+                    let container = Container::read(&mut buf)?;
                     let mut switch = Switch {
                         switch_key: self
                             .hashlist
@@ -393,9 +461,9 @@ impl DLGE {
                             }
                             0x02 => {
                                 containers.random[index as usize].cases = cases.into();
-                                switch.containers.push(DlgeType::Random(
-                                    containers.random[index as usize].clone(),
-                                ));
+                                switch
+                                    .containers
+                                    .push(containers.random[index as usize].clone().into());
                                 containers.random.shift_remove(&(index as usize));
                             }
                             _ => {}
@@ -411,7 +479,7 @@ impl DLGE {
                     // Sequence containers can contain any of the containers apart from sequence containers of course.
                     // Unsure if this is a hard limitation, or if they've just not used any.
                     // Further testing required. (Although if it is a limitation, this is logical).
-                    let container = Container::read(buf.clone())?;
+                    let container = Container::read(&mut buf)?;
                     let mut sequence = Sequence { containers: vec![] };
 
                     for metadata in container.metadata {
@@ -429,19 +497,19 @@ impl DLGE {
                             0x01 => {
                                 sequence
                                     .containers
-                                    .push(DlgeType::WavFile(containers.wav[index].clone()));
+                                    .push(containers.wav[index].clone().into());
                                 containers.wav.shift_remove(&index);
                             }
                             0x02 => {
                                 sequence
                                     .containers
-                                    .push(DlgeType::Random(containers.random[index].clone()));
+                                    .push(containers.random[index].clone().into());
                                 containers.random.shift_remove(&index);
                             }
                             0x03 => {
                                 sequence
                                     .containers
-                                    .push(DlgeType::Switch(containers.switch[index].clone()));
+                                    .push(containers.switch[index].clone().into());
                                 containers.switch.shift_remove(&index);
                             }
                             _ => {}
@@ -459,24 +527,321 @@ impl DLGE {
         let root_type = root >> 12;
         let root_index = (root & 0xFFF) as usize;
 
-        j.root = serde_json::to_value(match root_type {
-            0x01 => DlgeType::WavFile(containers.wav[root_index].clone()),
-            0x02 => DlgeType::Random(containers.random[root_index].clone()),
-            0x03 => DlgeType::Switch(containers.switch[root_index].clone()),
-            0x04 => DlgeType::Sequence(containers.sequence[root_index].clone()),
+        j.root = match root_type {
+            0x01 => containers.wav[root_index].clone().into(),
+            0x02 => containers.random[root_index].clone().into(),
+            0x03 => containers.switch[root_index].clone().into(),
+            0x04 => containers.sequence[root_index].clone().into(),
             n => return Err(LangError::InvalidContainer(n as u8)),
-        })?;
+        };
 
         Ok(j)
     }
 
-    pub fn rebuild(&self) -> LangResult<Rebuilt> {
-        unimplemented!()
+    fn add_depend(&mut self, path: String, flag: String) -> u32 {
+        if self.depends.contains_key(&path) {
+            return self.depends.get_index_of(&path).unwrap() as u32;
+        } else {
+            self.depends.insert(path, flag);
+            return (self.depends.len() - 1) as u32;
+        }
+    }
+
+    fn process_container(
+        &mut self,
+        buf: &mut ByteWriter,
+        container: &mut DlgeType,
+        indices: &mut IndexMap<i32, i32>,
+        is_root: bool,
+    ) -> LangResult<()> {
+        match container {
+            DlgeType::WavFile(wav) => {
+                buf.append::<u8>(0x01);
+                buf.append::<u32>(*self.hashlist.tags.get_by_right(&wav.soundtag).unwrap());
+                buf.append::<u32>(
+                    u32::from_str_radix(&wav.wav_name, 16)
+                        .unwrap_or(crc32fast::hash(wav.wav_name.as_bytes())),
+                );
+
+                if self.version != Version::H2016 {
+                    buf.append::<u32>(0x00);
+                }
+
+                for (index, language) in self.lang_map.clone().iter().enumerate() {
+                    if self.version == Version::H2016 {
+                        buf.append::<u32>(0x00);
+                    }
+
+                    if *language == self.default_locale {
+                        buf.append(
+                            self.add_depend(
+                                wav.default_wav.clone(),
+                                format!("{:02X}", 0x80 + index),
+                            ),
+                        );
+                        buf.append(
+                            self.add_depend(
+                                wav.default_ffx.clone(),
+                                format!("{:02X}", 0x80 + index),
+                            ),
+                        );
+
+                        if wav.languages.contains_key(language) {
+                            match wav.languages[language].as_str() {
+                                Some(str) => {
+                                    if str.len() == 0 {
+                                        buf.append::<u32>(0);
+                                    }
+
+                                    buf.write_vec(xtea_encrypt(str));
+                                }
+                                None => {
+                                    buf.append::<u32>(0);
+                                }
+                            }
+                        }
+                    } else {
+                        if !wav.languages.contains_key(language) {
+                            buf.append::<u64>(u64::MAX);
+                            buf.append::<u32>(0);
+
+                            continue;
+                        }
+
+                        match wav.languages[language].as_object() {
+                            Some(obj) => {
+                                buf.append(self.add_depend(
+                                    obj["wav"].to_string(),
+                                    format!("{:02X}", 0x80 + index),
+                                ));
+                                buf.append(self.add_depend(
+                                    obj["ffx"].to_string(),
+                                    format!("{:02X}", 0x80 + index),
+                                ));
+
+                                if obj.contains_key("subtitle") {
+                                    let subtitle = obj["subtitle"].as_str().unwrap();
+                                    buf.write_vec(xtea_encrypt(subtitle));
+                                } else {
+                                    buf.append::<u32>(0);
+                                }
+
+                                continue;
+                            }
+                            None => {
+                                buf.append::<u64>(u64::MAX);
+
+                                if wav.languages[language].is_string() {
+                                    let subtitle = wav.languages[language].as_str().unwrap();
+                                    buf.write_vec(xtea_encrypt(subtitle));
+                                } else {
+                                    buf.append::<u32>(0);
+                                }
+
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                indices[1] += 1;
+            }
+            DlgeType::Random(random) => {
+                let mut container = Container::new(0x02, 0, 0);
+
+                for child in random.containers.clone() {
+                    match child {
+                        DlgeType::WavFile(wav) => {
+                            if wav.weight.is_none() {
+                                return Err(LangError::InvalidReference(0x01));
+                            }
+
+                            let weight_value = wav.weight.clone().unwrap();
+
+                            self.process_container(buf, &mut wav.clone().into(), indices, false)?;
+
+                            let weight: u32 = match weight_value.as_str() {
+                                Some(str) => u32::from_str_radix(str, 16)?,
+                                None => {
+                                    // Must be double
+                                    let value = weight_value.as_f64().unwrap();
+                                    (value * (0xFFFFFF as f64)).round() as u32
+                                }
+                            };
+
+                            container.metadata.push(Metadata {
+                                type_index: ((0x02 << 12) | (indices[2] & 0xFFF)) as u16,
+                                hashes: vec![weight],
+                            });
+                        }
+                        _ => {
+                            return Err(LangError::InvalidReference(0x15));
+                        }
+                    }
+                }
+
+                container.write(buf);
+                indices[0] += 1;
+                indices[2] += 1;
+            }
+            DlgeType::Switch(switch) => {
+                if indices[3] != -1 {
+                    return Err(LangError::InvalidContainer(0x03));
+                }
+
+                let mut container = Container::new(
+                    3,
+                    *self
+                        .hashlist
+                        .switches
+                        .get_by_right(&switch.switch_key)
+                        .unwrap_or(
+                            &u32::from_str_radix(&switch.switch_key, 16)
+                                .unwrap_or(crc32fast::hash(switch.switch_key.as_bytes())),
+                        ),
+                    *self
+                        .hashlist
+                        .switches
+                        .get_by_right(&switch.default)
+                        .unwrap_or(
+                            &u32::from_str_radix(&switch.default, 16)
+                                .unwrap_or(crc32fast::hash(switch.default.as_bytes())),
+                        ),
+                );
+
+                for child in switch.containers.clone() {
+                    let source_cases: Vec<String>;
+                    let mut cases: Vec<u32> = Vec::new();
+
+                    match child.clone() {
+                        DlgeType::WavFile(container) => {
+                            if container.cases.is_none() {
+                                return Err(LangError::InvalidReference(0x15));
+                            }
+                            source_cases = container.cases.unwrap();
+                        }
+                        DlgeType::Random(container) => {
+                            if container.cases.is_none() {
+                                return Err(LangError::InvalidReference(0x15));
+                            }
+                            source_cases = container.cases.unwrap();
+                        }
+                        _ => {
+                            return Err(LangError::InvalidReference(0x15));
+                        }
+                    }
+
+                    self.process_container(buf, &mut child.clone(), indices, false)?;
+
+                    for case in source_cases {
+                        cases.push(
+                            *self.hashlist.switches.get_by_right(&case).unwrap_or(
+                                &u32::from_str_radix(&case, 16)
+                                    .unwrap_or(crc32fast::hash(case.as_bytes())),
+                            ),
+                        );
+                    }
+
+                    container.metadata.push(Metadata {
+                        type_index: ((0x03 << 12) | (indices[3] & 0xFFF)) as u16,
+                        hashes: cases,
+                    });
+
+                    indices[3] += 1;
+                }
+
+                container.write(buf);
+                indices[0] += 1;
+                indices[3] += 1;
+            }
+            DlgeType::Sequence(sequence) => {
+                if indices[4] != -1 {
+                    return Err(LangError::InvalidContainer(0x04));
+                }
+
+                let container = Container::new(4, 0, 0);
+
+                for child in sequence.containers.clone() {
+                    self.process_container(buf, &mut child.clone(), indices, false)?;
+
+                    indices[4] += 1;
+                }
+
+                container.write(buf);
+                indices[0] += 1;
+                indices[4] += 1;
+            }
+            _ => {}
+        }
+
+        if is_root {
+            let container_type = match container {
+                DlgeType::WavFile(_) => 1,
+                DlgeType::Random(_) => 2,
+                DlgeType::Switch(_) => 3,
+                DlgeType::Sequence(_) => 4,
+                _ => 0x15,
+            };
+            buf.append::<u16>(
+                ((container_type << 12)
+                    | (indices[if container_type == 0x01 { 0x01 } else { 0x00 }] & 0xFFF))
+                    as u16,
+            );
+        }
+
+        Ok(())
+    }
+
+    pub fn rebuild(&mut self, json: String) -> LangResult<Rebuilt> {
+        self.depends.clear();
+
+        let mut json: DlgeJson = serde_json::from_str(&json)?;
+
+        // The langmap property overrides the struct's language map.
+        // This property ensures easy compat with tools like SMF.
+        // We restore this back later.
+        let mut old_langmap: Option<Vec<String>> = None;
+        if json.langmap.is_some() {
+            old_langmap = Some(self.lang_map.clone());
+            self.lang_map = json
+                .langmap
+                .unwrap()
+                .split(",")
+                .map(|s| s.to_string())
+                .collect();
+        };
+
+        let mut buf = ByteWriter::new(Endianness::Little);
+
+        buf.append::<u32>(0x00);
+        self.depends.insert(json.ditl, String::from("1F"));
+        buf.append::<u32>(0x01);
+        self.depends.insert(json.clng, String::from("1F"));
+
+        // 0 is the "global" index
+        let mut indices = indexmap! {
+            0 => -1,
+            1 => -1,
+            2 => -1,
+            3 => -1,
+            4 => -1
+        };
+
+        self.process_container(&mut buf, &mut json.root, &mut indices, true)?;
+
+        if old_langmap.is_some() {
+            self.lang_map = old_langmap.unwrap();
+        }
+
+        Ok(Rebuilt {
+            file: buf.buf(),
+            meta: String::from(""),
+        })
     }
 }
 
 #[test]
-fn test_dlge() -> Result<(), LangError> {
+fn test_dlge() -> LangResult<()> {
     let file = std::fs::read("hash_list.hmla").expect("No file.");
     let hashlist = HashList::load(file.as_slice()).unwrap();
 
@@ -487,6 +852,21 @@ fn test_dlge() -> Result<(), LangError> {
         String::from_utf8(std::fs::read("test.dlge.json").expect("No file."))?,
     )?;
     std::fs::write("dlge.json", serde_json::to_string(&json)?).unwrap();
+
+    Ok(())
+}
+
+#[test]
+fn test_dlge_rebuild() -> LangResult<()> {
+    let file = std::fs::read("hash_list.hmla").expect("No file.");
+    let hashlist = HashList::load(file.as_slice()).unwrap();
+
+    let mut dlge = DLGE::new(hashlist, Version::H3, None, None, false)?;
+    let rebuilt = dlge.rebuild(String::from_utf8(
+        std::fs::read("dlge.json").expect("No file."),
+    )?)?;
+
+    std::fs::write("rebuilt.DLGE", rebuilt.file).unwrap();
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-use std::string::FromUtf8Error;
+use std::{num::ParseIntError, string::FromUtf8Error};
 
 use crate::util::bytereader::ByteReaderError;
 
@@ -18,11 +18,19 @@ pub enum LangError {
     Utf8Error(FromUtf8Error),
     InvalidContainer(u8),
     InvalidReference(u8),
+    ParseIntError(ParseIntError),
+    InvalidInput,
 }
 
 impl From<ByteReaderError> for LangError {
     fn from(err: ByteReaderError) -> Self {
         LangError::ByteReaderError(err)
+    }
+}
+
+impl From<ParseIntError> for LangError {
+    fn from(err: ParseIntError) -> Self {
+        LangError::ParseIntError(err)
     }
 }
 

@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use crate::util::transmutable::{Endianness, ToBytes};
 
 #[derive(Debug)]
@@ -34,6 +36,15 @@ impl ByteWriter {
             self.buf.insert(pos + i, buf[i]);
         }
         Ok(buf.len())
+    }
+    
+    // could be write_sized_vec::<T>
+    pub fn write_vec<T: ByteWriterResource + Clone>(&mut self, data: Vec<T>) -> usize {
+        self.append::<u32>(data.len() as u32);
+        for v in data.iter() {
+            self.append::<T>(v.clone());
+        };
+        data.len()*size_of::<T>() + 4
     }
 
     pub fn buf(&self) -> Vec<u8> {
