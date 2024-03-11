@@ -9,7 +9,7 @@ use byteorder::LE;
 use extended_tea::XTEA;
 use indexmap::{indexmap, IndexMap};
 use once_cell::sync::Lazy;
-use regex::Regex;
+use fancy_regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
 
@@ -128,11 +128,12 @@ fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
         return format!("{:08X}", hash);
     }
 
-    let r = Regex::new(r"\/([^\/]+)_\.wav").unwrap();
+    let r = Regex::new(r"([^\/]*(?=\.wav))").unwrap();
+    let r_ffx = Regex::new(r"([^\/]*(?=\.animset))").unwrap();
 
-    match r.find(wav_hash) {
+    match r.find(wav_hash).unwrap() {
         Some(hash) => hash.as_str().into(),
-        None => match r.find(&ffx_hash) {
+        None => match r_ffx.find(&ffx_hash).unwrap() {
             Some(hash) => hash.as_str().into(),
             None => format!("{:08X}", hash),
         },
@@ -485,7 +486,7 @@ fn test_dlge() -> Result<(), LangError> {
         filedata.as_slice(),
         String::from_utf8(std::fs::read("test.dlge.json").expect("No file."))?,
     )?;
-    println!("{}", serde_json::to_string(&json)?);
+    std::fs::write("dlge.json", serde_json::to_string(&json)?).unwrap();
 
     Ok(())
 }
