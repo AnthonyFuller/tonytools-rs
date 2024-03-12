@@ -273,7 +273,7 @@ impl<'a> ByteReader<'a> {
     }
     pub fn read_remaining<T: ByteReaderResource>(&mut self) -> Result<Vec<T>, ByteReaderError> {
         let v = self.size::<T>()?;
-        self.read_n::<T>(self.len()/v)
+        self.read_n::<T>(self.len() / v)
     }
 }
 

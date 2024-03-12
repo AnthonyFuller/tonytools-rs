@@ -86,7 +86,6 @@ impl TryFromBytes for String {
         let len = res.len();
         Ok((res, len + 1))
     }
-
 }
 
 impl<T: traits::FromBytes<Bytes = [u8; size_of::<T>()]> + TInt> TryFromBytes for T
