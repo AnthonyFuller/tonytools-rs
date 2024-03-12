@@ -1,7 +1,7 @@
 use std::{array::TryFromSliceError, io::BufRead};
 
 use crate::{
-    hmtextures::{self, Format, Type},
+    hmtextures::{self, structs::RGBA, Format, Type},
     util::{
         bytereader::{ByteReader, ByteReaderError, ByteReaderErrorKind},
         transmutable::Endianness,
@@ -21,7 +21,7 @@ struct Texture {
     pub atlas_offset: u32,
 
     pub mips_datasizes: [u32; 0xE],
-    // pub pixels: Vec<u8>,
+    pub pixels: Vec<RGBA>,
 }
 
 #[derive(Default, Debug)]
@@ -91,7 +91,7 @@ impl Texture {
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
-        // texture.pixels = buf.fill_buf()?.to_vec();
+        texture.pixels = buf.read_remaining::<RGBA>()?;
         Ok(texture)
     }
 }
