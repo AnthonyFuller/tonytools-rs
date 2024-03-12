@@ -1,10 +1,12 @@
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use super::hashlist::HashList;
-use super::{LangError, LangResult, Rebuilt};
+use super::{LangResult, Rebuilt};
 use crate::util::bytereader::ByteReader;
-use crate::util::rpkg;
+use crate::util::bytewriter::ByteWriter;
+use crate::util::rpkg::{self, ResourceMeta};
 use crate::util::transmutable::Endianness;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -12,16 +14,21 @@ pub struct DitlJson {
     #[serde(rename = "$schema")]
     schema: String,
     hash: String,
-    soundtags: serde_json::Value,
+    soundtags: Map<String, serde_json::Value>,
 }
 
 pub struct DITL {
     hashlist: HashList,
+    // This is used for rebuilding.
+    depends: IndexMap<String, String>,
 }
 
 impl DITL {
     pub fn new(hashlist: HashList) -> LangResult<Self> {
-        Ok(DITL { hashlist })
+        Ok(DITL {
+            hashlist,
+            depends: IndexMap::new(),
+        })
     }
 
     pub fn convert(&self, data: &[u8], meta_json: String) -> LangResult<DitlJson> {
@@ -30,7 +37,7 @@ impl DITL {
         let mut j = DitlJson {
             schema: "https://tonytools.win/schemas/ditl.schema.json".into(),
             hash: "".into(),
-            soundtags: Map::new().into(),
+            soundtags: Map::new(),
         };
 
         let count = buf.read::<u32>()?;
@@ -48,29 +55,46 @@ impl DITL {
                 .clone();
             let hex: String = format!("{:08X}", hash);
             let hash = self.hashlist.tags.get_by_left(&hash).unwrap_or(&hex);
-            j.soundtags[hash] = depend.hash.into();
+            j.soundtags.insert(hash.clone(), depend.hash.into());
         }
 
         Ok(j)
     }
 
-    pub fn rebuild(&self) -> LangResult<Rebuilt> {
-        unimplemented!()
+    fn add_depend(&mut self, path: String, flag: String) -> u32 {
+        if self.depends.contains_key(&path) {
+            return self.depends.get_index_of(&path).unwrap() as u32;
+        } else {
+            self.depends.insert(path, flag);
+            return (self.depends.len() - 1) as u32;
+        }
     }
-}
 
-#[test]
-fn test_ditl() -> Result<(), LangError> {
-    let file = std::fs::read("hash_list.hmla").expect("No file.");
-    let hashlist = HashList::load(file.as_slice()).unwrap();
+    pub fn rebuild(&mut self, json: String) -> LangResult<Rebuilt> {
+        self.depends.clear();
+        let json: DitlJson = serde_json::from_str(&json)?;
 
-    let ditl = DITL::new(hashlist)?;
-    let filedata = std::fs::read("test.DITL").expect("No file.");
-    let json = ditl.convert(
-        filedata.as_slice(),
-        String::from_utf8(std::fs::read("test.ditl.json").expect("No file."))?,
-    )?;
-    println!("{}", serde_json::to_string(&json)?);
+        let mut buf = ByteWriter::new(Endianness::Little);
 
-    Ok(())
+        buf.append(json.soundtags.len() as u32);
+
+        for (tag, hash) in json.soundtags {
+            let hash = hash.as_str().unwrap();
+
+            buf.append(self.add_depend(hash.to_string(), "1F".into()));
+            buf.append(*self.hashlist.tags.get_by_right(&tag).unwrap_or(
+                &u32::from_str_radix(&tag, 16).unwrap_or(crc32fast::hash(tag.as_bytes())),
+            ));
+        }
+
+        Ok(Rebuilt {
+            file: buf.buf(),
+            meta: serde_json::to_string(&ResourceMeta::new(
+                json.hash,
+                buf.len() as u32,
+                "DITL".into(),
+                self.depends.clone(),
+            ))?,
+        })
+    }
 }
