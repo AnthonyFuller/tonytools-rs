@@ -137,7 +137,7 @@ impl ToBytes for String {
 pub enum ByteError {
     ByteReaderError(ByteReaderError),
     ByteWriterError(ByteWriterError),
-    IOError(io::Error)
+    IOError(io::Error),
 }
 
 impl From<ByteReaderError> for ByteError {

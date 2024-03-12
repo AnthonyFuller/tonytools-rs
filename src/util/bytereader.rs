@@ -9,7 +9,6 @@ use std::{
 
 use crate::util::transmutable::{Endianness, TryFromBytes, TryFromBytesError};
 
-
 pub trait ByteReaderResource = TryFromBytes<Bytes = Vec<u8>, Error = TryFromBytesError>;
 /// Error returned by ByteReader
 pub struct ByteReaderError {
@@ -311,21 +310,9 @@ fn test_bytereader() -> Result<(), ByteError> {
     assert_eq!(reader.read::<u16>()?, 0x0080);
     assert_eq!(reader.read::<u16>()?, 0x0049);
     reader.seek(0x1c)?;
-    assert_eq!(reader.read_n::<u32>(14)?, vec![
-        8192,
-        10240,
-        10752,
-        10880,
-        10912,
-        10920,
-        10928,
-        10936,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-    ]);
+    assert_eq!(
+        reader.read_n::<u32>(14)?,
+        vec![8192, 10240, 10752, 10880, 10912, 10920, 10928, 10936, 0, 0, 0, 0, 0, 0,]
+    );
     Ok(())
 }

@@ -334,7 +334,8 @@ impl DLGE {
                         }
 
                         if buf.peek::<u32>()? != 0 {
-                            let data: serde_json::Value = xtea_decrypt(buf.read_vec::<u8>()?)?.into();
+                            let data: serde_json::Value =
+                                xtea_decrypt(buf.read_vec::<u8>()?)?.into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
