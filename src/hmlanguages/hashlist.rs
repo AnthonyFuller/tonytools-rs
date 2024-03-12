@@ -70,7 +70,7 @@ impl HashList {
                 .insert(buf.read::<u32>()?, buf.read::<String>()?);
         }
 
-        return Ok(hashlist);
+        Ok(hashlist)
     }
 
     pub fn clear(&mut self) {

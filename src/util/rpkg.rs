@@ -59,10 +59,10 @@ pub struct ResourceDependency {
 
 pub fn is_valid_hash(hash: &str) -> bool {
     let re = Regex::new(r"^[0-9A-F]{16}$").unwrap();
-    return re.is_match(hash).unwrap();
+    re.is_match(hash).unwrap()
 }
 
 pub fn compute_hash(hash: &str) -> String {
     let hash = format!("{:X}", md5::compute(hash));
-    format!("00{}", &hash[2..16]).into()
+    format!("00{}", &hash[2..16])
 }

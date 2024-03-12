@@ -3,7 +3,7 @@ use std::{array::TryFromSliceError, io::BufRead};
 use crate::{
     hmtextures::{self, structs::RGBA, Format, Type},
     util::{
-        bytereader::{ByteReader, ByteReaderError, ByteReaderErrorKind},
+        bytereader::{ByteReader, ByteReaderErrorKind},
         transmutable::Endianness,
     },
 };

@@ -35,7 +35,9 @@ impl LOCR {
         lang_map: Option<String>,
         symmetric: bool,
     ) -> LangResult<Self> {
-        let lang_map = if lang_map.is_none() {
+        let lang_map = if let Some(map) = lang_map {
+            map.split(',').map(|s| s.to_string()).collect()
+        } else {
             match version {
                 Version::H2016 | Version::H2 => vec_of_strings![
                     "xx", "en", "fr", "it", "de", "es", "ru", "mx", "br", "pl", "cn", "jp", "tc"
@@ -45,12 +47,6 @@ impl LOCR {
                 }
                 _ => return Err(LangError::UnsupportedVersion),
             }
-        } else {
-            lang_map
-                .unwrap()
-                .split(",")
-                .map(|s| s.to_string())
-                .collect()
         };
 
         Ok(LOCR {
@@ -75,7 +71,7 @@ impl LOCR {
             schema: "https://tonytools.win/schemas/locr.schema.json".into(),
             hash: "".into(),
             symmetric: None,
-            languages: Map::new().into(),
+            languages: Map::new(),
         };
 
         if self.symmetric && self.version == Version::H2016 {
@@ -89,15 +85,15 @@ impl LOCR {
         }
         buf.seek(cursor)?;
 
-        let offsets = buf.read_n::<u32>(num_languages as usize)?;
-        for i in 0..num_languages {
+        let offsets = buf.read_n::<u32>(num_languages)?;
+        for (i, offset) in offsets.iter().enumerate() {
             let language = self.lang_map.get(i).expect("Something went wrong");
             j.languages.insert(language.clone(), Map::new().into());
 
-            if offsets[i] == u32::MAX {
+            if *offset == u32::MAX {
                 continue;
             }
-            buf.seek(offsets[i] as usize)?;
+            buf.seek(*offset as usize)?;
 
             for _ in 0..buf.read::<u32>()? {
                 let hash_num = buf.read::<u32>()?;
@@ -143,7 +139,7 @@ impl LOCR {
             }
             let strings = strings.as_object().unwrap();
 
-            if strings.len() == 0 {
+            if strings.is_empty() {
                 buf.write(u32::MAX, offset)?;
                 offset += 4;
                 continue;

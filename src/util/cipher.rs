@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 
 use crate::hmlanguages::LangResult;
 
-const XTEA: Lazy<XTEA> =
+static XTEA: Lazy<XTEA> =
     Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
 
 pub fn xtea_decrypt(data: Vec<u8>) -> LangResult<String> {

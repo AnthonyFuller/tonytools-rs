@@ -23,7 +23,9 @@ pub struct CLNG {
 
 impl CLNG {
     pub fn new(version: Version, lang_map: Option<String>) -> LangResult<Self> {
-        let lang_map = if lang_map.is_none() {
+        let lang_map = if let Some(map) = lang_map {
+            map.split(',').map(|s| s.to_string()).collect()
+        } else {
             match version {
                 Version::H2016 | Version::H2 => vec_of_strings![
                     "xx", "en", "fr", "it", "de", "es", "ru", "mx", "br", "pl", "cn", "jp", "tc"
@@ -33,12 +35,6 @@ impl CLNG {
                 }
                 _ => return Err(LangError::UnsupportedVersion),
             }
-        } else {
-            lang_map
-                .unwrap()
-                .split(",")
-                .map(|s| s.to_string())
-                .collect()
         };
 
         Ok(CLNG { lang_map })
@@ -50,7 +46,7 @@ impl CLNG {
         let mut j = ClngJson {
             schema: "https://tonytools.win/schemas/clng.schema.json".into(),
             hash: "".into(),
-            languages: Map::new().into(),
+            languages: Map::new(),
         };
 
         let bools = buf.read_n::<u8>(buf.len())?;

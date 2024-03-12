@@ -129,7 +129,7 @@ impl ToBytes for String {
     type Bytes = Vec<u8>;
 
     fn to_bytes(&self, _: Endianness) -> Self::Bytes {
-        String::from(self.to_owned() + "\0").to_owned().into()
+        (self.to_owned() + "\0").to_owned().into()
     }
 }
 

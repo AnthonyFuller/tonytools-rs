@@ -181,7 +181,7 @@ fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
 
     match r.find(wav_hash).unwrap() {
         Some(hash) => hash.as_str().into(),
-        None => match r_ffx.find(&ffx_hash).unwrap() {
+        None => match r_ffx.find(ffx_hash).unwrap() {
             Some(hash) => hash.as_str().into(),
             None => format!("{:08X}", hash),
         },
@@ -197,7 +197,9 @@ impl DLGE {
         hex_precision: bool,
     ) -> LangResult<Self> {
         let custom_langmap = lang_map.is_some();
-        let lang_map = if lang_map.is_none() {
+        let lang_map = if let Some(map) = lang_map {
+            map.split(',').map(|s| s.to_string()).collect()
+        } else {
             match version {
                 Version::H2016 => vec_of_strings![
                     "xx", "en", "fr", "it", "de", "es", "ru", "mx", "br", "pl", "cn", "jp"
@@ -210,12 +212,6 @@ impl DLGE {
                 }
                 _ => return Err(LangError::UnsupportedVersion),
             }
-        } else {
-            lang_map
-                .unwrap()
-                .split(",")
-                .map(|s| s.to_string())
-                .collect()
         };
 
         let default_locale = default_locale.unwrap_or(String::from("en"));
@@ -293,7 +289,7 @@ impl DLGE {
                             .clone(),
                         default_wav: String::from(""),
                         default_ffx: String::from(""),
-                        languages: Map::new().into(),
+                        languages: Map::new(),
                     };
 
                     for language in self.lang_map.as_slice() {
@@ -516,10 +512,10 @@ impl DLGE {
 
     fn add_depend(&mut self, path: String, flag: String) -> u32 {
         if self.depends.contains_key(&path) {
-            return self.depends.get_index_of(&path).unwrap() as u32;
+            self.depends.get_index_of(&path).unwrap() as u32
         } else {
             self.depends.insert(path, flag);
-            return (self.depends.len() - 1) as u32;
+            (self.depends.len() - 1) as u32
         }
     }
 
@@ -565,7 +561,7 @@ impl DLGE {
                         if wav.languages.contains_key(language) {
                             match wav.languages[language].as_str() {
                                 Some(str) => {
-                                    if str.len() == 0 {
+                                    if str.is_empty() {
                                         buf.append::<u32>(0);
                                     }
 
@@ -686,26 +682,25 @@ impl DLGE {
                 );
 
                 for child in switch.containers.clone() {
-                    let source_cases: Vec<String>;
                     let mut cases: Vec<u32> = Vec::new();
 
-                    match child.clone() {
+                    let source_cases: Vec<String> = match child.clone() {
                         DlgeType::WavFile(container) => {
                             if container.cases.is_none() {
                                 return Err(LangError::InvalidReference(0x15));
                             }
-                            source_cases = container.cases.unwrap();
+                            container.cases.unwrap()
                         }
                         DlgeType::Random(container) => {
                             if container.cases.is_none() {
                                 return Err(LangError::InvalidReference(0x15));
                             }
-                            source_cases = container.cases.unwrap();
+                            container.cases.unwrap()
                         }
                         _ => {
                             return Err(LangError::InvalidReference(0x15));
                         }
-                    }
+                    };
 
                     self.process_container(buf, &mut child.clone(), indices, false)?;
 
@@ -782,7 +777,7 @@ impl DLGE {
             self.lang_map = json
                 .langmap
                 .unwrap()
-                .split(",")
+                .split(',')
                 .map(|s| s.to_string())
                 .collect();
         };

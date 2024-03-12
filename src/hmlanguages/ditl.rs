@@ -63,10 +63,10 @@ impl DITL {
 
     fn add_depend(&mut self, path: String, flag: String) -> u32 {
         if self.depends.contains_key(&path) {
-            return self.depends.get_index_of(&path).unwrap() as u32;
+            self.depends.get_index_of(&path).unwrap() as u32
         } else {
             self.depends.insert(path, flag);
-            return (self.depends.len() - 1) as u32;
+            (self.depends.len() - 1) as u32
         }
     }
 

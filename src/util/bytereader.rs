@@ -100,7 +100,7 @@ impl<'a> ByteReader<'a> {
     /// ```
     pub fn new(buf: &'a [u8], endianness: Endianness) -> Self {
         ByteReader {
-            buf: buf,
+            buf,
             cursor: buf,
             endianness,
         }
