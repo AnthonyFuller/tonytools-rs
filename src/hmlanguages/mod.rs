@@ -7,6 +7,7 @@ pub mod ditl;
 pub mod dlge;
 pub mod hashlist;
 pub mod locr;
+pub mod rtlv;
 
 #[derive(Debug)]
 pub enum LangError {

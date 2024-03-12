@@ -275,6 +275,10 @@ impl<'a> ByteReader<'a> {
         let v = self.size::<T>()?;
         self.read_n::<T>(self.len() / v)
     }
+    pub fn rebase(&mut self, pos: usize) {
+        self.buf = &self.buf[pos..];
+        self.cursor = self.buf;
+    }
 }
 
 impl<'a> io::Read for ByteReader<'a> {
