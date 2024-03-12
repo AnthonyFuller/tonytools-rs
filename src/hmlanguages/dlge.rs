@@ -3,19 +3,14 @@ use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::bytereader::ByteReader;
 use crate::util::bytewriter::ByteWriter;
+use crate::util::cipher::{xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
 use crate::util::transmutable::Endianness;
 use crate::Version;
-use byteorder::LE;
-use extended_tea::XTEA;
 use fancy_regex::Regex;
 use indexmap::{indexmap, IndexMap};
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
-
-const XTEA: Lazy<XTEA> =
-    Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DlgeJson {
@@ -163,7 +158,7 @@ impl Container {
         buf.append(self.metadata.len() as u32);
         for metadata in self.metadata {
             buf.append(metadata.type_index);
-            buf.write_vec(metadata.hashes);
+            buf.write_sized_vec(metadata.hashes);
         }
     }
 }
@@ -191,19 +186,6 @@ fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
             None => format!("{:08X}", hash),
         },
     }
-}
-
-fn xtea_encrypt(str: &str) -> Vec<u8> {
-    let mut str = str.as_bytes().to_vec();
-    if str.len() % 8 != 0 {
-        str.extend(vec![0; 8 - (str.len() % 8)]);
-    }
-
-    let mut out_data = vec![0; str.len()];
-
-    XTEA.encipher_u8slice::<LE>(&str, &mut out_data);
-
-    out_data
 }
 
 impl DLGE {
@@ -352,14 +334,7 @@ impl DLGE {
                         }
 
                         if buf.peek::<u32>()? != 0 {
-                            let str_data = buf.read_vec::<u8>()?;
-                            let mut out_data = str_data.clone();
-
-                            XTEA.decipher_u8slice::<LE>(&str_data, &mut out_data);
-                            let data: serde_json::Value = String::from_utf8(out_data)?
-                                .trim_matches(char::from(0))
-                                .to_string()
-                                .into();
+                            let data: serde_json::Value = xtea_decrypt(buf.read_vec::<u8>()?)?.into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
@@ -593,7 +568,7 @@ impl DLGE {
                                         buf.append::<u32>(0);
                                     }
 
-                                    buf.write_vec(xtea_encrypt(str));
+                                    buf.write_sized_vec(xtea_encrypt(str));
                                 }
                                 None => {
                                     buf.append::<u32>(0);
@@ -621,7 +596,7 @@ impl DLGE {
 
                                 if obj.contains_key("subtitle") {
                                     let subtitle = obj["subtitle"].as_str().unwrap();
-                                    buf.write_vec(xtea_encrypt(subtitle));
+                                    buf.write_sized_vec(xtea_encrypt(subtitle));
                                 } else {
                                     buf.append::<u32>(0);
                                 }
@@ -633,7 +608,7 @@ impl DLGE {
 
                                 if wav.languages[language].is_string() {
                                     let subtitle = wav.languages[language].as_str().unwrap();
-                                    buf.write_vec(xtea_encrypt(subtitle));
+                                    buf.write_sized_vec(xtea_encrypt(subtitle));
                                 } else {
                                     buf.append::<u32>(0);
                                 }

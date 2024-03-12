@@ -33,19 +33,27 @@ impl ByteWriter {
         let buf = data.to_bytes(self.endianness);
         let size = buf.len();
         for i in 0..size {
-            self.buf.insert(pos + i, buf[i]);
+            self.buf[pos + i] = buf[i];
         }
         Ok(buf.len())
     }
-    pub fn len(&self) -> usize { self.buf.len() }
-    
-    // could be write_sized_vec::<T>
+    pub fn len(&self) -> usize {
+        self.buf.len()
+    }
+
     pub fn write_vec<T: ByteWriterResource + Clone>(&mut self, data: Vec<T>) -> usize {
+        for v in data.iter() {
+            self.append::<T>(v.clone());
+        }
+        data.len() * size_of::<T>()
+    }
+
+    pub fn write_sized_vec<T: ByteWriterResource + Clone>(&mut self, data: Vec<T>) -> usize {
         self.append::<u32>(data.len() as u32);
         for v in data.iter() {
             self.append::<T>(v.clone());
-        };
-        data.len()*size_of::<T>() + 4
+        }
+        data.len() * size_of::<T>() + 4
     }
 
     pub fn buf(&self) -> Vec<u8> {

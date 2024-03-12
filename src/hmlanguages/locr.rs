@@ -2,34 +2,14 @@ use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::bytereader::ByteReader;
-use crate::util::rpkg;
+use crate::util::bytewriter::ByteWriter;
+use crate::util::cipher::{symmetric_decrypt, symmetric_encrypt, xtea_decrypt, xtea_encrypt};
+use crate::util::rpkg::{self, ResourceMeta};
 use crate::util::transmutable::Endianness;
 use crate::Version;
-use byteorder::LE;
-use extended_tea::XTEA;
-use once_cell::sync::Lazy;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-
-const XTEA: Lazy<XTEA> =
-    Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
-
-fn symmetric_decrypt(mut data: Vec<u8>) -> LangResult<String> {
-    for char in data.as_mut_slice() {
-        let value = *char;
-        *char = (value & 1)
-            | (value & 2) << 3
-            | (value & 4) >> 1
-            | (value & 8) << 2
-            | (value & 16) >> 2
-            | (value & 32) << 1
-            | (value & 64) >> 3
-            | (value & 128);
-        *char ^= 226;
-    }
-
-    Ok(String::from_utf8(data)?)
-}
+use serde_json::Map;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LocrJson {
@@ -38,7 +18,7 @@ pub struct LocrJson {
     hash: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     symmetric: Option<bool>,
-    languages: serde_json::Value,
+    languages: Map<String, serde_json::Value>,
 }
 
 pub struct LOCR {
@@ -112,7 +92,7 @@ impl LOCR {
         let offsets = buf.read_n::<u32>(num_languages as usize)?;
         for i in 0..num_languages {
             let language = self.lang_map.get(i).expect("Something went wrong");
-            j.languages[language] = Value::Object(Map::new());
+            j.languages.insert(language.clone(), Map::new().into());
 
             if offsets[i] == u32::MAX {
                 continue;
@@ -124,17 +104,11 @@ impl LOCR {
                 let hex: String = format!("{:08X}", hash_num);
                 let hash = self.hashlist.lines.get_by_left(&hash_num).unwrap_or(&hex);
                 let str_data = buf.read_vec::<u8>()?;
-                let mut out_data = str_data.clone();
                 buf.seek(buf.cursor() + 1)?; // Skip null terminator
 
                 j.languages[language][hash] = match self.symmetric {
                     true => symmetric_decrypt(str_data)?.into(),
-                    false => {
-                        XTEA.decipher_u8slice::<LE>(&str_data, &mut out_data);
-                        String::from_utf8(out_data)?
-                            .trim_matches(char::from(0))
-                            .into()
-                    }
+                    false => xtea_decrypt(str_data)?.into(),
                 }
             }
         }
@@ -145,23 +119,65 @@ impl LOCR {
         Ok(j)
     }
 
-    pub fn rebuild(&self) -> LangResult<Rebuilt> {
-        unimplemented!()
+    pub fn rebuild(&self, json: String) -> LangResult<Rebuilt> {
+        let json: LocrJson = serde_json::from_str(&json)?;
+        let mut symmetric = self.symmetric;
+
+        if json.symmetric.is_some_and(|b| b) && self.version == Version::H2016 {
+            symmetric = true;
+        }
+
+        let mut buf = ByteWriter::new(Endianness::Little);
+
+        if self.version != Version::H2016 {
+            buf.append::<u8>(0);
+        }
+
+        let mut offset = buf.len();
+
+        buf.write_vec(vec![0; json.languages.len()]);
+
+        for strings in json.languages.values() {
+            if !strings.is_object() {
+                return Err(LangError::InvalidInput);
+            }
+            let strings = strings.as_object().unwrap();
+
+            if strings.len() == 0 {
+                buf.write(u32::MAX, offset)?;
+                offset += 4;
+                continue;
+            }
+
+            buf.write(buf.len() as u32, offset)?;
+            offset += 4;
+
+            buf.append(strings.len() as u32);
+            for (hash, str) in strings {
+                if !str.is_string() {
+                    return Err(LangError::InvalidInput);
+                }
+                let str = str.as_str().unwrap();
+
+                buf.append(*self.hashlist.lines.get_by_right(hash).unwrap_or(
+                    &u32::from_str_radix(hash, 16).unwrap_or(crc32fast::hash(hash.as_bytes())),
+                ));
+                buf.write_sized_vec(match symmetric {
+                    true => symmetric_encrypt(str.as_bytes().to_vec()),
+                    false => xtea_encrypt(str),
+                });
+                buf.append::<u8>(0);
+            }
+        }
+
+        Ok(Rebuilt {
+            file: buf.buf(),
+            meta: serde_json::to_string(&ResourceMeta::new(
+                json.hash,
+                buf.len() as u32,
+                "LOCR".into(),
+                IndexMap::new(),
+            ))?,
+        })
     }
-}
-
-#[test]
-fn test_locr() -> Result<(), LangError> {
-    let file = std::fs::read("hash_list.hmla").expect("No file.");
-    let hashlist = HashList::load(file.as_slice()).unwrap();
-
-    let locr = LOCR::new(hashlist, Version::H3, None, false)?;
-    let filedata = std::fs::read("test.LOCR").expect("No file.");
-    let json = locr.convert(
-        filedata.as_slice(),
-        String::from_utf8(std::fs::read("test.meta.json").expect("No file."))?,
-    )?;
-    println!("{}", serde_json::to_string(&json)?);
-
-    Ok(())
 }

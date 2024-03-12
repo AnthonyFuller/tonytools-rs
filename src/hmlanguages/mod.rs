@@ -1,6 +1,6 @@
 use std::{num::ParseIntError, string::FromUtf8Error};
 
-use crate::util::bytereader::ByteReaderError;
+use crate::util::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
 
 pub mod clng;
 pub mod ditl;
@@ -15,6 +15,7 @@ pub enum LangError {
     JsonError(serde_json::Error),
     UnsupportedVersion,
     ByteReaderError(ByteReaderError),
+    ByteWriterError(ByteWriterError),
     Utf8Error(FromUtf8Error),
     InvalidContainer(u8),
     InvalidReference(u8),
@@ -25,6 +26,12 @@ pub enum LangError {
 impl From<ByteReaderError> for LangError {
     fn from(err: ByteReaderError) -> Self {
         LangError::ByteReaderError(err)
+    }
+}
+
+impl From<ByteWriterError> for LangError {
+    fn from(err: ByteWriterError) -> Self {
+        LangError::ByteWriterError(err)
     }
 }
 
