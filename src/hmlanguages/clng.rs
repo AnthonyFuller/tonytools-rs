@@ -1,9 +1,11 @@
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use super::{LangError, LangResult, Rebuilt};
 use crate::util::bytereader::ByteReader;
-use crate::util::rpkg;
+use crate::util::bytewriter::ByteWriter;
+use crate::util::rpkg::{self, ResourceMeta};
 use crate::util::transmutable::Endianness;
 use crate::{vec_of_strings, Version};
 
@@ -12,7 +14,7 @@ pub struct ClngJson {
     #[serde(rename = "$schema")]
     schema: String,
     hash: String,
-    languages: serde_json::Value,
+    languages: Map<String, serde_json::Value>,
 }
 
 pub struct CLNG {
@@ -66,20 +68,26 @@ impl CLNG {
         Ok(j)
     }
 
-    pub fn rebuild(&self) -> LangResult<Rebuilt> {
-        unimplemented!()
+    pub fn rebuild(&self, json: String) -> LangResult<Rebuilt> {
+        let json: ClngJson = serde_json::from_str(&json)?;
+        let mut buf = ByteWriter::new(Endianness::Little);
+
+        for v in json.languages.values() {
+            if !v.is_boolean() {
+                return Err(LangError::InvalidInput);
+            }
+
+            buf.append(v.as_bool().unwrap() as u8);
+        }
+
+        Ok(Rebuilt {
+            file: buf.buf(),
+            meta: serde_json::to_string(&ResourceMeta::new(
+                json.hash,
+                buf.len() as u32,
+                "CLNG".into(),
+                IndexMap::new(),
+            ))?,
+        })
     }
-}
-
-#[test]
-fn test_clng() -> LangResult<()> {
-    let clng = CLNG::new(Version::H3, None)?;
-    let filedata = std::fs::read("test.CLNG").expect("No file.");
-    let json = clng.convert(
-        filedata.as_slice(),
-        String::from_utf8(std::fs::read("test.clng.json").expect("No file."))?,
-    )?;
-    println!("{}", serde_json::to_string(&json)?);
-
-    Ok(())
 }
