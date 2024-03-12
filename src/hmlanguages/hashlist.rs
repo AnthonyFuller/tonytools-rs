@@ -80,21 +80,3 @@ impl HashList {
         self.version = u32::MAX;
     }
 }
-
-#[test]
-fn test_hash_list() -> Result<(), std::io::Error> {
-    let file = std::fs::read("hash_list.hmla")?;
-
-    let hashlist = HashList::load(file.as_slice()).unwrap();
-
-    println!(
-        "{:?}",
-        hashlist
-            .lines
-            .get_by_right("EVERGREEN_SETPIECES_GEARWALL_ITEM_GEARCAPACITYCOST_DESCRIPTION")
-    );
-
-    println!("{:?}", hashlist.lines.get_by_left(&18554));
-
-    Ok(())
-}
