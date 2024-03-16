@@ -56,7 +56,7 @@ impl Tony {
         let compressed = lz4_flex::block::compress(&data);
 
         Self {
-            magic: 0x544F4E59, // TONY
+            magic: 0x594E4F54, // TONY
             colour_type,
             width,
             height,
