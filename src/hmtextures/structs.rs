@@ -1,4 +1,4 @@
-use crate::Version;
+use crate::{hmlanguages::LangResult, util::{bytewriter::ByteWriter, transmutable::Endianness}, Version};
 use texture2ddecoder::{decode_bc1, decode_bc3, decode_bc4, decode_bc5, decode_bc7};
 
 use super::{ColourType, Format, Type};
@@ -10,6 +10,20 @@ pub struct Metadata {
     pub format: Format,
     pub flags: u32,
     pub interpret_as: u8,
+}
+
+impl Metadata {
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut buf = ByteWriter::new(Endianness::Little);
+
+        buf.append(self.version as u8);
+        buf.append(self.r#type as u8);
+        buf.append(self.format as u16);
+        buf.append(self.flags);
+        buf.append(self.interpret_as);
+
+        buf.buf()
+    }
 }
 
 #[derive(Debug)]
@@ -51,6 +65,21 @@ impl Tony {
             data: compressed,
             metadata,
         }
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut buf = ByteWriter::new(Endianness::Little);
+
+        buf.append(self.magic);
+        //buf.append(self.colour_type);
+        buf.append(self.width);
+        buf.append(self.height);
+        buf.append(self.decompressed_size);
+        buf.append(self.compressed_size);
+        buf.write_vec(self.data.clone());
+        buf.write_vec(self.metadata.serialize());
+
+        buf.buf()
     }
 }
 
