@@ -10,12 +10,15 @@ use crate::util::bytereader::ByteReaderError;
 pub mod hm2016;
 pub mod structs;
 
+pub type TextureResult<T> = Result<T, Error>;
+
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     InvalidMagic,
     InvalidDimensions,
     UnknownType,
     UnknownFormat,
+    AtlasNotSupported,
     ByteReaderError(ByteReaderError),
     IOError(io::Error),
 }
@@ -33,7 +36,7 @@ impl From<ByteReaderError> for Error {
 }
 
 #[derive(Default, Debug, Clone, Copy)]
-enum Type {
+pub enum Type {
     Colour,
     Normal,
     Height,
@@ -42,11 +45,13 @@ enum Type {
     #[default]
     Unknown,
 }
+
 impl From<Type> for u16 {
     fn from(r#type: Type) -> Self {
         r#type as u16
     }
 }
+
 impl TryFrom<u16> for Type {
     type Error = self::Error;
     fn try_from(value: u16) -> Result<Self, Self::Error> {
@@ -60,8 +65,9 @@ impl TryFrom<u16> for Type {
         ][(value.try_into() as Result<usize, Infallible>).map_err(|_| self::Error::UnknownType)?])
     }
 }
-#[derive(Default, Debug)]
-enum Format {
+
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
+pub enum Format {
     #[default]
     Unknown = 0,
     R16G16B16A16 = 0x0A,
@@ -74,16 +80,17 @@ enum Format {
     BC5 = 0x55,  //2-channel normal maps
     BC7 = 0x5A,  //high res color + full alpha. Used for pretty much everything...
 }
+
 impl From<Format> for u16 {
     fn from(format: Format) -> Self {
         format as u16
     }
 }
+
 impl TryFrom<u16> for Format {
     type Error = self::Error;
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Self::Unknown),
             0x0A => Ok(Self::R16G16B16A16),
             0x1C => Ok(Self::R8G8B8A8),
             0x34 => Ok(Self::R8G8),
@@ -97,14 +104,11 @@ impl TryFrom<u16> for Format {
         }
     }
 }
-struct BuiltTexture<'a> {
-    pub width: u16,
-    pub height: u16,
-    pub mips_count: u8,
 
-    pub mips_sizes: [u32; 0xE],
-    pub compressed_sizes: [u32; 0xE],
-
-    pub pixels: &'a [u8],
-    pub compressed_pixels: &'a [u8],
+// Cut down version of the one in the image crate.
+pub enum ColourType {
+    L8,
+    Rgb8,
+    Rgba8,
+    Rgba16,
 }
