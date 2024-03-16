@@ -71,7 +71,7 @@ impl Tony {
         let mut buf = ByteWriter::new(Endianness::Little);
 
         buf.append(self.magic);
-        //buf.append(self.colour_type);
+        buf.append(self.colour_type as u8);
         buf.append(self.width);
         buf.append(self.height);
         buf.append(self.decompressed_size);

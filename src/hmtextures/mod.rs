@@ -106,6 +106,7 @@ impl TryFrom<u16> for Format {
 }
 
 // Cut down version of the one in the image crate.
+#[derive(Copy, Clone)]
 pub enum ColourType {
     L8,
     Rgb8,
