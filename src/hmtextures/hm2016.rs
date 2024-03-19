@@ -1,15 +1,19 @@
-use std::{io::BufRead};
+use std::io::BufRead;
 
 use crate::{
     hmtextures::Error,
     util::{
         bytereader::{ByteReader, ByteReaderErrorKind},
+        texture::{get_pixel_size, get_scale_factor, max_mip_count},
         transmutable::Endianness,
     },
     Version,
 };
 
-use super::{structs::{Metadata, RawImage, Tony}, TextureResult};
+use super::{
+    structs::{Metadata, RawImage, Tony},
+    TextureResult,
+};
 #[derive(Default, Debug)]
 struct Texture {
     pub magic: u16,
@@ -46,7 +50,7 @@ impl Texture {
             Err(e) => Err(e.into()),
         }?;
 
-        buf.consume(4); // SKIP TEXD
+        let is_texd = (buf.read::<u32>()? == 0x4000) && is_texd;
 
         if let [fs, fl] = buf.read_n::<u32>(2)?[..] {
             [texture.file_size, texture.metadata.flags] = [fs, fl];
@@ -56,8 +60,9 @@ impl Texture {
         };
 
         if !is_texd {
-            texture.width /= 4;
-            texture.height /= 4;
+            let sf = get_scale_factor(texture.width, texture.height);
+            texture.width /= sf;
+            texture.height /= sf;
         }
 
         if let Ok(fmt) = buf.read::<u16>()?.try_into() {
@@ -72,6 +77,7 @@ impl Texture {
                 texture.mips_interpol_mode,
             ] = [mc, dm, ia, dim, mim];
         }
+
         buf.consume(1);
         if texture.dimensions != 0 {
             return Err(Error::InvalidDimensions);
@@ -102,17 +108,10 @@ impl Into<RawImage> for Texture {
         RawImage {
             width: self.width,
             height: self.width,
-            pixels: self.pixels[..(self.mips_datasizes[0] as usize)].to_vec(),
+            pixels: self.pixels
+                [..get_pixel_size(self.metadata.format, self.width, self.height, 0) as usize]
+                .to_vec(),
             metadata: self.metadata,
         }
     }
-}
-
-#[test]
-fn test_hm2016() -> TextureResult<()> {
-    let file = std::fs::read("texture-a8.texd")?;
-    let texture = Texture::load(file.as_slice(), true)?;
-    let tony: Tony = Into::<RawImage>::into(texture).into();
-
-    Ok(())
 }
