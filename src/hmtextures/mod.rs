@@ -7,6 +7,7 @@ macro_rules! vec_of_strings {
 
 use crate::util::bytereader::ByteReaderError;
 
+pub mod hm2;
 pub mod hm2016;
 pub mod structs;
 
