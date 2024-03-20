@@ -36,7 +36,7 @@ impl Texture {
         let mut texture = Texture::default();
         texture.metadata.version = Version::H2;
 
-        texture.magic = match buf.read::<u16>() {
+        match buf.read::<u16>() {
             Ok(1) => Ok(1),
             Ok(_) => Err(Error::InvalidMagic),
             Err(e) => Err(e.into()),
@@ -48,9 +48,10 @@ impl Texture {
             Err(e) => Err(e.into()),
         }?;
 
-        if let [fs, fl] = buf.read_n::<u32>(2)?[..] {
-            [texture.file_size, texture.metadata.flags] = [fs, fl];
-        };
+        // Skip file size
+        buf.consume(0x4);
+
+        texture.metadata.flags = buf.read()?;
 
         if let [w, h] = buf.read_n::<u16>(2)?[..] {
             [texture.width, texture.height] = [w as u32, h as u32];
@@ -60,12 +61,8 @@ impl Texture {
             texture.metadata.format = fmt;
         };
 
-        if let [mc, dm] = buf.read_n::<u8>(2)?[..] {
-            [
-                texture.mips_count,
-                texture.default_mip,
-            ] = [mc, dm];
-        }
+        // Skip mip count and default mip
+        buf.consume(0x2);
 
         if (buf.read::<u32>()? == 0x4000) && !is_texd {
             let sf = get_scale_factor(texture.width, texture.height);
@@ -73,16 +70,8 @@ impl Texture {
             texture.height /= sf;
         }
 
-        if let Ok(mds) = buf.read_n::<u32>(14)?.as_slice().try_into() {
-            texture.mips_datasizes = mds;
-        } else {
-            return Err(Error::ByteReaderError(
-                buf.err(ByteReaderErrorKind::NoBytes),
-            ));
-        };
-
-        // Skip the duplicated sizes
-        buf.consume(0xE * 4);
+        // Skip the mip sizes
+        buf.consume(0xE * 4 * 2);
 
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];

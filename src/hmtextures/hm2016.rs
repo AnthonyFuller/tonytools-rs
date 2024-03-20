@@ -38,7 +38,7 @@ impl Texture {
         let mut texture = Texture::default();
         texture.metadata.version = Version::H2016;
 
-        texture.magic = match buf.read::<u16>() {
+        match buf.read::<u16>() {
             Ok(1) => Ok(1),
             Ok(_) => Err(Error::InvalidMagic),
             Err(e) => Err(e.into()),
@@ -52,9 +52,11 @@ impl Texture {
 
         let is_texd = (buf.read::<u32>()? == 0x4000) && is_texd;
 
-        if let [fs, fl] = buf.read_n::<u32>(2)?[..] {
-            [texture.file_size, texture.metadata.flags] = [fs, fl];
-        };
+        // Skip file size
+        buf.consume(0x4);
+        
+        texture.metadata.flags = buf.read()?;
+
         if let [w, h] = buf.read_n::<u16>(2)?[..] {
             [texture.width, texture.height] = [w as u32, h as u32];
         };
@@ -68,32 +70,23 @@ impl Texture {
         if let Ok(fmt) = buf.read::<u16>()?.try_into() {
             texture.metadata.format = fmt;
         };
-        if let [mc, dm, ia, dim, mim] = buf.read_n::<u8>(5)?[..] {
-            [
-                texture.mips_count,
-                texture.default_mip,
-                texture.metadata.interpret_as,
-                texture.dimensions,
-                texture.mips_interpol_mode,
-            ] = [mc, dm, ia, dim, mim];
-        }
 
-        buf.consume(1);
-        if texture.dimensions != 0 {
+        // Skip mip count + default mip
+        buf.consume(0x2);
+
+        texture.metadata.interpret_as = buf.read()?;
+
+        if buf.read::<u8>()? != 0 {
             return Err(Error::InvalidDimensions);
         }
 
-        if let Ok(mds) = buf.read_n::<u32>(14)?.as_slice().try_into() {
-            texture.mips_datasizes = mds;
-        } else {
-            return Err(Error::ByteReaderError(
-                buf.err(ByteReaderErrorKind::NoBytes),
-            ));
-        };
+        // Skip interpol mode and mip sizes
+        buf.consume(1 + (0xE * 4));
 
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
+
         if texture.atlas_size != 0 {
             return Err(Error::AtlasNotSupported);
         }
