@@ -1,5 +1,5 @@
 [package]
-name = "tonytools-rs"
+name = "tonytools"
 version = "0.1.0"
 edition = "2021"
 
