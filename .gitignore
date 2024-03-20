@@ -20,3 +20,10 @@ Cargo.lock
 *.CLNG
 *.json
 *.DITL
+*.tga
+*.text
+*.texd
+*.tony
+*.tonymeta
+*.png
+*.dds
