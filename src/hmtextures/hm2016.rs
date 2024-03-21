@@ -3,17 +3,15 @@ use std::io::BufRead;
 use crate::{
     hmtextures::Error,
     util::{
-        bytereader::{ByteReader, ByteReaderErrorKind},
-        texture::{get_pixel_size, get_scale_factor, max_mip_count},
+        bytereader::ByteReader,
+        texture::{get_pixel_size, get_scale_factor},
         transmutable::Endianness,
     },
     Version,
 };
 
-use super::{
-    structs::{Metadata, RawImage, Tony},
-    TextureResult,
-};
+use super::structs::{Metadata, RawImage};
+
 #[derive(Default, Debug)]
 struct Texture {
     pub magic: u16,
@@ -54,7 +52,7 @@ impl Texture {
 
         // Skip file size
         buf.consume(0x4);
-        
+
         texture.metadata.flags = buf.read()?;
 
         if let [w, h] = buf.read_n::<u16>(2)?[..] {
@@ -80,8 +78,10 @@ impl Texture {
             return Err(Error::InvalidDimensions);
         }
 
-        // Skip interpol mode and mip sizes
-        buf.consume(1 + (0xE * 4));
+        texture.metadata.interpol_mode = buf.read::<u8>()? as u16;
+
+        // Skip mip sizes
+        buf.consume(0xE * 4);
 
         if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];

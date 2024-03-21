@@ -1,4 +1,4 @@
-use crate::{hmlanguages::LangResult, util::{bytewriter::ByteWriter, transmutable::Endianness}, Version};
+use crate::{util::{bytewriter::ByteWriter, transmutable::Endianness}, Version};
 use texture2ddecoder::{decode_bc1, decode_bc3, decode_bc4, decode_bc5, decode_bc7};
 
 use super::{ColourType, Format, Type};

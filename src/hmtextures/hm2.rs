@@ -2,7 +2,7 @@ use std::io::BufRead;
 
 use crate::{
     util::{
-        bytereader::{ByteReader, ByteReaderErrorKind},
+        bytereader::ByteReader,
         texture::{get_pixel_size, get_scale_factor},
         transmutable::Endianness,
     },
@@ -10,8 +10,8 @@ use crate::{
 };
 
 use super::{
-    structs::{Metadata, RawImage, Tony},
-    Error, TextureResult,
+    structs::{Metadata, RawImage},
+    Error,
 };
 
 #[derive(Default, Debug)]

@@ -1,17 +1,17 @@
-use std::{io::BufRead, path::Path};
+use std::io::BufRead;
 
 use crate::{
     util::{
-        bytereader::{ByteReader, ByteReaderErrorKind},
-        texture::{get_pixel_size, get_scale_factor, get_total_size},
+        bytereader::ByteReader,
+        texture::{get_pixel_size, get_total_size},
         transmutable::Endianness,
     },
     Version,
 };
 
 use super::{
-    structs::{Metadata, RawImage, Tony},
-    Error, TextureResult,
+    structs::{Metadata, RawImage},
+    Error,
 };
 
 #[derive(Default, Debug)]
