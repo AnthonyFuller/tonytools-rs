@@ -10,6 +10,7 @@ pub struct Metadata {
     pub format: Format,
     pub flags: u32,
     pub interpret_as: u8,
+    pub interpol_mode: u16,
 }
 
 impl Metadata {
@@ -39,8 +40,8 @@ pub struct Tony {
     pub colour_type: ColourType,
     pub width: u32,
     pub height: u32,
-    pub decompressed_size: u32,
-    pub compressed_size: u32,
+    pub decompressed_size: u64,
+    pub compressed_size: u64,
     pub data: Vec<u8>,
     pub metadata: Metadata,
 }
@@ -60,8 +61,8 @@ impl Tony {
             colour_type,
             width,
             height,
-            decompressed_size: data.len() as u32,
-            compressed_size: compressed.len() as u32,
+            decompressed_size: data.len() as u64,
+            compressed_size: compressed.len() as u64,
             data: compressed,
             metadata,
         }
@@ -76,8 +77,8 @@ impl Tony {
         buf.append(self.height);
         buf.append(self.decompressed_size);
         buf.append(self.compressed_size);
-        buf.write_vec(self.data.clone());
-        buf.write_vec(self.metadata.serialize());
+        buf.append_vec(self.data.clone());
+        buf.append_vec(self.metadata.serialize());
 
         buf.buf()
     }
@@ -172,7 +173,7 @@ impl Into<Tony> for RawImage {
                         let b = if fix_channel { 0xFF } else { v[0] };
                         [v[2], v[1], b, v[3]]
                     })
-                    .collect::<Vec<u8>>();
+                    .collect();
             }
         }
 

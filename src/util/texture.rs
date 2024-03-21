@@ -62,8 +62,8 @@ pub fn compute_pitch(format: Format, width: u32, height: u32) -> (u32, u32) {
     (pitch, slice)
 }
 
-pub fn get_pixel_size(format: Format, mut width: u32, mut height: u32, mut mip_level: u32) -> u32 {
-    let max_mip = max_mip_count(width, height);
+pub fn get_pixel_size(format: Format, mut width: u32, mut height: u32, mut mip_level: u8) -> u32 {
+    let max_mip = max_mip_count(width, height) as u8;
     if mip_level > max_mip {
         mip_level = max_mip;
     }
@@ -74,4 +74,14 @@ pub fn get_pixel_size(format: Format, mut width: u32, mut height: u32, mut mip_l
     let (_, slice) = compute_pitch(format, width, height);
 
     slice
+}
+
+pub fn get_total_size(format: Format, width: u32, height: u32, mip_levels: u8) -> u32 {
+    let mut size: u32 = 0;
+
+    for i in 0..mip_levels {
+        size += get_pixel_size(format, width, height, i);
+    }
+
+    size
 }

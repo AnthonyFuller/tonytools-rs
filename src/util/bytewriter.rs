@@ -41,6 +41,10 @@ impl ByteWriter {
         self.buf.len()
     }
 
+    pub fn append_vec(&mut self, mut data: Vec<u8>) -> () {
+        self.buf.append(&mut data);
+    }
+
     pub fn write_vec<T: ByteWriterResource + Clone>(&mut self, data: Vec<T>) -> usize {
         for v in data.iter() {
             self.append::<T>(v.clone());

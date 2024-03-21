@@ -9,6 +9,7 @@ use crate::util::bytereader::ByteReaderError;
 
 pub mod hm2;
 pub mod hm2016;
+pub mod hm3;
 pub mod structs;
 
 pub type TextureResult<T> = Result<T, Error>;
