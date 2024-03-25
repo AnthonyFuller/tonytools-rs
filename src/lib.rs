@@ -16,6 +16,4 @@ pub enum Version {
     H2,
     #[default]
     H3,
-    HMA,
-    Alpha,
 }
