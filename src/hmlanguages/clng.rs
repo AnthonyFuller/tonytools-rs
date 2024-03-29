@@ -3,11 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use super::{LangError, LangResult, Rebuilt};
-use crate::util::bytereader::ByteReader;
-use crate::util::bytewriter::ByteWriter;
 use crate::util::rpkg::{self, ResourceMeta};
-use crate::util::transmutable::Endianness;
 use crate::{vec_of_strings, Version};
+use bitchomp::{ByteReader, ByteWriter, Endianness};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClngJson {

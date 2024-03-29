@@ -1,12 +1,9 @@
+use bitchomp::{ByteReader, Endianness};
 use std::io::BufRead;
 
 use crate::{
     hmtextures::Error,
-    util::{
-        bytereader::ByteReader,
-        texture::{get_pixel_size, get_scale_factor},
-        transmutable::Endianness,
-    },
+    util::texture::{get_pixel_size, get_scale_factor},
     Version,
 };
 

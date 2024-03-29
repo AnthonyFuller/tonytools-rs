@@ -1,6 +1,5 @@
-use crate::util::bytereader::{ByteReader, ByteReaderError};
-use crate::util::transmutable::Endianness;
 use bimap::BiMap;
+use bitchomp::{ByteReader, ByteReaderError, Endianness};
 
 pub struct HashList {
     pub tags: BiMap<u32, String>,

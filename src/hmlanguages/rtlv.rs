@@ -1,14 +1,12 @@
+use bitchomp::{ByteReader, ByteWriter, Endianness};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::{
     util::{
-        bytereader::ByteReader,
-        bytewriter::ByteWriter,
         cipher::{xtea_decrypt, xtea_encrypt},
         rpkg::{compute_hash, is_valid_hash, ResourceMeta},
-        transmutable::Endianness,
     },
     vec_of_strings, Version,
 };

@@ -1,6 +1,6 @@
 use std::{num::ParseIntError, string::FromUtf8Error};
 
-use crate::util::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
+use bitchomp::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
 
 pub mod clng;
 pub mod ditl;

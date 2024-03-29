@@ -5,7 +5,7 @@ macro_rules! vec_of_strings {
     ($($x:expr),*) => (vec![$($x.to_string()),*]);
 }
 
-use crate::util::bytereader::ByteReaderError;
+use bitchomp::bytereader::ByteReaderError;
 
 pub mod hm2;
 pub mod hm2016;

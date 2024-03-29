@@ -1,12 +1,10 @@
 use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
-use crate::util::bytereader::ByteReader;
-use crate::util::bytewriter::ByteWriter;
 use crate::util::cipher::{symmetric_decrypt, symmetric_encrypt, xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, ResourceMeta};
-use crate::util::transmutable::Endianness;
 use crate::Version;
+use bitchomp::{ByteReader, ByteWriter, Endianness};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
@@ -45,7 +43,6 @@ impl LOCR {
                 Version::H3 => {
                     vec_of_strings!["xx", "en", "fr", "it", "de", "es", "ru", "cn", "tc", "jp"]
                 }
-                _ => return Err(LangError::UnsupportedVersion),
             }
         };
 

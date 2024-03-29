@@ -1,11 +1,8 @@
+use bitchomp::{ByteReader, Endianness};
 use std::io::BufRead;
 
 use crate::{
-    util::{
-        bytereader::ByteReader,
-        texture::{get_pixel_size, get_total_size},
-        transmutable::Endianness,
-    },
+    util::texture::{get_pixel_size, get_total_size},
     Version,
 };
 
