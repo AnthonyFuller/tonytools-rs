@@ -43,6 +43,7 @@ impl LOCR {
                 Version::H3 => {
                     vec_of_strings!["xx", "en", "fr", "it", "de", "es", "ru", "cn", "tc", "jp"]
                 }
+                _ => return Err(LangError::UnsupportedVersion),
             }
         };
 
