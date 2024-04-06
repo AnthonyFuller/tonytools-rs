@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use bitchomp::{ByteReader, Endianness};
 use std::io::BufRead;
 
