@@ -1,10 +1,5 @@
 use std::{convert::Infallible, io};
 
-#[macro_export]
-macro_rules! vec_of_strings {
-    ($($x:expr),*) => (vec![$($x.to_string()),*]);
-}
-
 use bitchomp::bytereader::ByteReaderError;
 
 pub mod hm2;
