@@ -7,8 +7,9 @@ use crate::{
     util::{
         cipher::{xtea_decrypt, xtea_encrypt},
         rpkg::{compute_hash, is_valid_hash, ResourceMeta},
+        vec_of_strings,
     },
-    vec_of_strings, Version,
+    Version,
 };
 
 use super::{LangError, LangResult, Rebuilt};

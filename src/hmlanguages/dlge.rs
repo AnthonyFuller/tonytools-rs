@@ -1,8 +1,8 @@
-use super::super::vec_of_strings;
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::cipher::{xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
+use crate::util::vec_of_strings;
 use crate::Version;
 use bitchomp::{ByteReader, ByteWriter, Endianness};
 use fancy_regex::Regex;
