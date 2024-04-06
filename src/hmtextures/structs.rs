@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::Version;
 use bitchomp::{ByteWriter, Endianness};
 use texture2ddecoder::{decode_bc1, decode_bc3, decode_bc4, decode_bc5, decode_bc7};

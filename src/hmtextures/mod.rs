@@ -7,8 +7,6 @@ pub mod hm2016;
 pub mod hm3;
 pub mod structs;
 
-pub type TextureResult<T> = Result<T, Error>;
-
 #[derive(Debug)]
 pub enum Error {
     InvalidMagic,
