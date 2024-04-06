@@ -144,7 +144,7 @@ impl GameRtlv {
         buf.write_vec(vec![0_u8; 16 * data.len()]);
 
         for (i, value) in data.iter().enumerate() {
-            let encrypted = xtea_encrypt(&value);
+            let encrypted = xtea_encrypt(value);
 
             let start = i * 0x10;
             buf.write((encrypted.len() | 0x40000000) as u32, start)?;
@@ -270,7 +270,7 @@ impl RTLV {
 
         let json: RtlvJson = serde_json::from_str(&json)?;
 
-        if json.videos.len() < 1 {
+        if json.videos.is_empty() {
             return Err(LangError::InvalidInput);
         }
 
