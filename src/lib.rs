@@ -1,3 +1,5 @@
+#![feature(generic_const_exprs)]
+
 pub mod hmlanguages;
 pub mod hmtextures;
 pub mod util;
