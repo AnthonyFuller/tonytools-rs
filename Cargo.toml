@@ -8,6 +8,7 @@ authors = ["Anthony Fuller", "KingPEPSALT"]
 license = "LGPL-3.0-only"
 readme = "README.md"
 version = "0.1.0"
+exclude = [".vscode/**", ".gitignore"]
 edition = "2021"
 
 [dependencies]
