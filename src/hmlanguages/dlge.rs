@@ -432,9 +432,9 @@ impl DLGE {
                                 }
 
                                 containers.wav.get_mut(&index).unwrap().cases = cases.into();
-                                switch
-                                    .containers
-                                    .push(DlgeType::WavFile(containers.wav.get(&index).unwrap().clone()));
+                                switch.containers.push(DlgeType::WavFile(
+                                    containers.wav.get(&index).unwrap().clone(),
+                                ));
                                 containers.wav.swap_remove(&{ index });
                             }
                             0x02 => {
@@ -626,7 +626,8 @@ impl DLGE {
                                 buf.append::<u64>(u64::MAX);
 
                                 if wav.languages.get(language).unwrap().is_string() {
-                                    let subtitle = wav.languages.get(language).unwrap().as_str().unwrap();
+                                    let subtitle =
+                                        wav.languages.get(language).unwrap().as_str().unwrap();
                                     buf.write_sized_vec(xtea_encrypt(subtitle));
                                 } else {
                                     buf.append::<u32>(0);
