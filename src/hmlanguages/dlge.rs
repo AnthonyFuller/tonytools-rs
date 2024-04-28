@@ -593,6 +593,8 @@ impl DLGE {
                                     buf.append::<u32>(0);
                                 }
                             }
+                        } else {
+                            buf.append::<u32>(0);
                         }
                     } else {
                         if !wav.languages.contains_key(language) {
