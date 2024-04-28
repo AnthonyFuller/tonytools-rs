@@ -1,6 +1,10 @@
+use strum_macros::Display;
+use std::error::Error;
+
 use bimap::BiMap;
 use bitchomp::{ByteReader, ByteReaderError, Endianness};
 
+#[derive(Clone)]
 pub struct HashList {
     pub tags: BiMap<u32, String>,
     pub switches: BiMap<u32, String>,
@@ -8,7 +12,7 @@ pub struct HashList {
     pub version: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum HashListError {
     InvalidFile,
     InvalidChecksum,
@@ -21,6 +25,8 @@ impl From<ByteReaderError> for HashListError {
         HashListError::ReaderError(err)
     }
 }
+
+impl Error for HashListError {}
 
 impl HashList {
     pub fn load(data: &[u8]) -> Result<Self, HashListError> {

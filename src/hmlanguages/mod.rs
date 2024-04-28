@@ -1,6 +1,7 @@
-use std::{num::ParseIntError, string::FromUtf8Error};
+use std::{error::Error, num::ParseIntError, string::FromUtf8Error};
 
 use bitchomp::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
+use strum_macros::Display;
 
 pub mod clng;
 pub mod ditl;
@@ -9,7 +10,7 @@ pub mod hashlist;
 pub mod locr;
 pub mod rtlv;
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum LangError {
     InvalidLanguageMap,
     DidNotReachEOF,
@@ -53,6 +54,8 @@ impl From<FromUtf8Error> for LangError {
         LangError::Utf8Error(err)
     }
 }
+
+impl Error for LangError {}
 
 pub type LangResult<T> = Result<T, LangError>;
 
