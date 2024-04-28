@@ -5,7 +5,7 @@ use texture2ddecoder::{decode_bc1, decode_bc3, decode_bc4, decode_bc5, decode_bc
 
 use super::{ColourType, Format, Type};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Metadata {
     pub version: Version,
     pub r#type: Type,
@@ -29,7 +29,7 @@ impl Metadata {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RawImage {
     pub width: u32,
     pub height: u32,
@@ -86,99 +86,105 @@ impl Tony {
     }
 }
 
+fn get_image_pixels(img: RawImage) -> (ColourType, Vec<u8>) {
+    let mut pixels = vec![0_u32; (img.width * img.height) as usize];
+    let mut data: Vec<u8> = Vec::new();
+    let mut fix_channel = false;
+
+    let mut colour = ColourType::Rgba8;
+    match img.metadata.format {
+        Format::R16G16B16A16 => {
+            colour = ColourType::Rgba16;
+            data = img.pixels.clone();
+        }
+        Format::R8G8B8A8 => {
+            data = img.pixels.clone();
+        }
+        Format::R8G8 => {
+            colour = ColourType::Rgb8;
+            data = img
+                .pixels
+                .chunks_exact(2)
+                .flat_map(|e| [e[0], e[1], 0xFF])
+                .collect();
+        }
+        Format::A8 => {
+            colour = ColourType::L8;
+            data = img.pixels.clone();
+        }
+        Format::DXT1 => {
+            decode_bc1(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                pixels.as_mut_slice(),
+            )
+            .unwrap();
+        }
+        Format::DXT5 => {
+            decode_bc3(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                pixels.as_mut_slice(),
+            )
+            .unwrap();
+        }
+        Format::BC4 => {
+            colour = ColourType::L8;
+
+            decode_bc4(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                pixels.as_mut_slice(),
+            )
+            .unwrap();
+        }
+        Format::BC5 => {
+            fix_channel = true;
+
+            decode_bc5(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                pixels.as_mut_slice(),
+            )
+            .unwrap();
+        }
+        Format::BC7 => {
+            decode_bc7(
+                &img.pixels,
+                img.width as usize,
+                img.height as usize,
+                pixels.as_mut_slice(),
+            )
+            .unwrap();
+        }
+        _ => {}
+    }
+
+    match img.metadata.format {
+        Format::R16G16B16A16 | Format::R8G8B8A8 | Format::R8G8 | Format::A8 => {}
+        _ => {
+            data = pixels
+                .iter()
+                .flat_map(|x| {
+                    let v = x.to_le_bytes();
+                    let b = if fix_channel { 0xFF } else { v[0] };
+                    [v[2], v[1], b, v[3]]
+                })
+                .collect();
+        }
+    }
+
+    (colour, data)
+}
+
 impl From<RawImage> for Tony {
-    fn from(val: RawImage) -> Self {
-        let mut pixels = vec![0_u32; (val.width * val.height) as usize];
-        let mut data: Vec<u8> = Vec::new();
-        let mut fix_channel = false;
+    fn from(img: RawImage) -> Self {
+        let (colour, data) = get_image_pixels(img.clone());
 
-        let mut colour = ColourType::Rgba8;
-        match val.metadata.format {
-            Format::R16G16B16A16 => {
-                colour = ColourType::Rgba16;
-                data = val.pixels.clone();
-            }
-            Format::R8G8B8A8 => {
-                data = val.pixels.clone();
-            }
-            Format::R8G8 => {
-                colour = ColourType::Rgb8;
-                data = val
-                    .pixels
-                    .chunks_exact(2)
-                    .flat_map(|e| [e[0], e[1], 0xFF])
-                    .collect();
-            }
-            Format::A8 => {
-                colour = ColourType::L8;
-                data = val.pixels.clone();
-            }
-            Format::DXT1 => {
-                decode_bc1(
-                    &val.pixels,
-                    val.width as usize,
-                    val.height as usize,
-                    pixels.as_mut_slice(),
-                )
-                .unwrap();
-            }
-            Format::DXT5 => {
-                decode_bc3(
-                    &val.pixels,
-                    val.width as usize,
-                    val.height as usize,
-                    pixels.as_mut_slice(),
-                )
-                .unwrap();
-            }
-            Format::BC4 => {
-                colour = ColourType::L8;
-
-                decode_bc4(
-                    &val.pixels,
-                    val.width as usize,
-                    val.height as usize,
-                    pixels.as_mut_slice(),
-                )
-                .unwrap();
-            }
-            Format::BC5 => {
-                fix_channel = true;
-
-                decode_bc5(
-                    &val.pixels,
-                    val.width as usize,
-                    val.height as usize,
-                    pixels.as_mut_slice(),
-                )
-                .unwrap();
-            }
-            Format::BC7 => {
-                decode_bc7(
-                    &val.pixels,
-                    val.width as usize,
-                    val.height as usize,
-                    pixels.as_mut_slice(),
-                )
-                .unwrap();
-            }
-            _ => {}
-        }
-
-        match val.metadata.format {
-            Format::R16G16B16A16 | Format::R8G8B8A8 | Format::R8G8 | Format::A8 => {}
-            _ => {
-                data = pixels
-                    .iter()
-                    .flat_map(|x| {
-                        let v = x.to_le_bytes();
-                        let b = if fix_channel { 0xFF } else { v[0] };
-                        [v[2], v[1], b, v[3]]
-                    })
-                    .collect();
-            }
-        }
-
-        Tony::new(colour, val.width, val.height, data, val.metadata)
+        Tony::new(colour, img.width, img.height, data, img.metadata)
     }
 }
