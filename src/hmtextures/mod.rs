@@ -14,19 +14,19 @@ pub enum Error {
     UnknownType,
     UnknownFormat,
     AtlasNotSupported,
-    ByteReaderError(ByteReaderError),
-    IOError(io::Error),
+    ReaderError(ByteReaderError),
+    IO(io::Error),
 }
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        Error::IOError(err)
+        Error::IO(err)
     }
 }
 
 impl From<ByteReaderError> for Error {
     fn from(err: ByteReaderError) -> Self {
-        Error::ByteReaderError(err)
+        Error::ReaderError(err)
     }
 }
 

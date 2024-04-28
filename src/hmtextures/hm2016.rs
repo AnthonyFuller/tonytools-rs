@@ -94,15 +94,15 @@ impl Texture {
     }
 }
 
-impl Into<RawImage> for Texture {
-    fn into(self) -> RawImage {
+impl From<Texture> for RawImage {
+    fn from(val: Texture) -> Self {
         RawImage {
-            width: self.width,
-            height: self.width,
-            pixels: self.pixels
-                [..get_pixel_size(self.metadata.format, self.width, self.height, 0) as usize]
+            width: val.width,
+            height: val.width,
+            pixels: val.pixels
+                [..get_pixel_size(val.metadata.format, val.width, val.height, 0) as usize]
                 .to_vec(),
-            metadata: self.metadata,
+            metadata: val.metadata,
         }
     }
 }

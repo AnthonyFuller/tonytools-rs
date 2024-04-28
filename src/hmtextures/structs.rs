@@ -86,24 +86,24 @@ impl Tony {
     }
 }
 
-impl Into<Tony> for RawImage {
-    fn into(self) -> Tony {
-        let mut pixels = vec![0_u32; (self.width * self.height) as usize];
+impl From<RawImage> for Tony {
+    fn from(val: RawImage) -> Self {
+        let mut pixels = vec![0_u32; (val.width * val.height) as usize];
         let mut data: Vec<u8> = Vec::new();
         let mut fix_channel = false;
 
         let mut colour = ColourType::Rgba8;
-        match self.metadata.format {
+        match val.metadata.format {
             Format::R16G16B16A16 => {
                 colour = ColourType::Rgba16;
-                data = self.pixels.clone();
+                data = val.pixels.clone();
             }
             Format::R8G8B8A8 => {
-                data = self.pixels.clone();
+                data = val.pixels.clone();
             }
             Format::R8G8 => {
                 colour = ColourType::Rgb8;
-                data = self
+                data = val
                     .pixels
                     .chunks_exact(2)
                     .flat_map(|e| [e[0], e[1], 0xFF])
@@ -111,22 +111,22 @@ impl Into<Tony> for RawImage {
             }
             Format::A8 => {
                 colour = ColourType::L8;
-                data = self.pixels.clone();
+                data = val.pixels.clone();
             }
             Format::DXT1 => {
                 decode_bc1(
-                    &self.pixels,
-                    self.width as usize,
-                    self.height as usize,
+                    &val.pixels,
+                    val.width as usize,
+                    val.height as usize,
                     pixels.as_mut_slice(),
                 )
                 .unwrap();
             }
             Format::DXT5 => {
                 decode_bc3(
-                    &self.pixels,
-                    self.width as usize,
-                    self.height as usize,
+                    &val.pixels,
+                    val.width as usize,
+                    val.height as usize,
                     pixels.as_mut_slice(),
                 )
                 .unwrap();
@@ -135,9 +135,9 @@ impl Into<Tony> for RawImage {
                 colour = ColourType::L8;
 
                 decode_bc4(
-                    &self.pixels,
-                    self.width as usize,
-                    self.height as usize,
+                    &val.pixels,
+                    val.width as usize,
+                    val.height as usize,
                     pixels.as_mut_slice(),
                 )
                 .unwrap();
@@ -146,18 +146,18 @@ impl Into<Tony> for RawImage {
                 fix_channel = true;
 
                 decode_bc5(
-                    &self.pixels,
-                    self.width as usize,
-                    self.height as usize,
+                    &val.pixels,
+                    val.width as usize,
+                    val.height as usize,
                     pixels.as_mut_slice(),
                 )
                 .unwrap();
             }
             Format::BC7 => {
                 decode_bc7(
-                    &self.pixels,
-                    self.width as usize,
-                    self.height as usize,
+                    &val.pixels,
+                    val.width as usize,
+                    val.height as usize,
                     pixels.as_mut_slice(),
                 )
                 .unwrap();
@@ -165,7 +165,7 @@ impl Into<Tony> for RawImage {
             _ => {}
         }
 
-        match self.metadata.format {
+        match val.metadata.format {
             Format::R16G16B16A16 | Format::R8G8B8A8 | Format::R8G8 | Format::A8 => {}
             _ => {
                 data = pixels
@@ -179,6 +179,6 @@ impl Into<Tony> for RawImage {
             }
         }
 
-        Tony::new(colour, self.width, self.height, data, self.metadata)
+        Tony::new(colour, val.width, val.height, data, val.metadata)
     }
 }

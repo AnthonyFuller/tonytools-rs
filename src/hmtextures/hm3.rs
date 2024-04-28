@@ -131,13 +131,13 @@ impl Texture {
     }
 }
 
-impl Into<RawImage> for Texture {
-    fn into(self) -> RawImage {
+impl From<Texture> for RawImage {
+    fn from(val: Texture) -> Self {
         RawImage {
-            width: self.width,
-            height: self.width,
-            pixels: self.pixels,
-            metadata: self.metadata,
+            width: val.width,
+            height: val.width,
+            pixels: val.pixels,
+            metadata: val.metadata,
         }
     }
 }

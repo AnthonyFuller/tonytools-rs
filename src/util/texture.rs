@@ -18,11 +18,11 @@ pub fn bits_per_pixel(format: Format) -> u32 {
 
 pub fn get_scale_factor(width: u32, height: u32) -> u32 {
     let area = (width * height) as f32;
-    return if (1 << 15) as f32 <= area && area <= (1 << 24) as f32 {
+    if (1 << 15) as f32 <= area && area <= (1 << 24) as f32 {
         2_u32.pow(((area.log2() - 13.0) / 2.0).floor().to_u32().unwrap())
     } else {
         1
-    };
+    }
 }
 
 pub fn max_mip_count(width: u32, _: u32) -> u32 {

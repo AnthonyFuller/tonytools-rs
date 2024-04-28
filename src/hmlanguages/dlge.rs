@@ -432,10 +432,10 @@ impl DLGE {
                                 }
 
                                 containers.wav.get_mut(&index).unwrap().cases = cases.into();
-                                switch.containers.push(DlgeType::WavFile(
-                                    containers.wav[index as usize].clone(),
-                                ));
-                                containers.wav.swap_remove(&(index as usize));
+                                switch
+                                    .containers
+                                    .push(DlgeType::WavFile(containers.wav[index].clone()));
+                                containers.wav.swap_remove(&{ index });
                             }
                             0x02 => {
                                 if !containers.random.contains_key(&index) {
@@ -445,8 +445,8 @@ impl DLGE {
                                 containers.random.get_mut(&index).unwrap().cases = cases.into();
                                 switch
                                     .containers
-                                    .push(containers.random[index as usize].clone().into());
-                                containers.random.swap_remove(&(index as usize));
+                                    .push(containers.random[index].clone().into());
+                                containers.random.swap_remove(&{ index });
                             }
                             _ => {}
                         }
