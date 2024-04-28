@@ -1,5 +1,5 @@
-use strum_macros::Display;
 use std::error::Error;
+use strum_macros::Display;
 
 use bimap::BiMap;
 use bitchomp::{ByteReader, ByteReaderError, Endianness};

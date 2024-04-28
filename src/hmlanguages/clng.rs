@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use super::{LangError, LangResult, Rebuilt};
-use crate::util::{rpkg::{self, ResourceMeta}, vec_of_strings};
+use crate::util::{
+    rpkg::{self, ResourceMeta},
+    vec_of_strings,
+};
 use crate::Version;
 use bitchomp::{ByteReader, ByteWriter, Endianness};
 
