@@ -341,7 +341,7 @@ impl DLGE {
                         }
 
                         if !subtitle.is_null() {
-                            wav.languages[language] = subtitle;
+                            wav.languages.insert(language.clone(), subtitle);
                         }
                     }
 
@@ -581,7 +581,7 @@ impl DLGE {
                         );
 
                         if wav.languages.contains_key(language) {
-                            match wav.languages[language].as_str() {
+                            match wav.languages.get(language).unwrap().as_str() {
                                 Some(str) => {
                                     if str.is_empty() {
                                         buf.append::<u32>(0);
@@ -602,7 +602,7 @@ impl DLGE {
                             continue;
                         }
 
-                        match wav.languages[language].as_object() {
+                        match wav.languages.get(language).unwrap().as_object() {
                             Some(obj) => {
                                 buf.append(self.add_depend(
                                     obj["wav"].to_string(),
@@ -625,8 +625,8 @@ impl DLGE {
                             None => {
                                 buf.append::<u64>(u64::MAX);
 
-                                if wav.languages[language].is_string() {
-                                    let subtitle = wav.languages[language].as_str().unwrap();
+                                if wav.languages.get(language).unwrap().is_string() {
+                                    let subtitle = wav.languages.get(language).unwrap().as_str().unwrap();
                                     buf.write_sized_vec(xtea_encrypt(subtitle));
                                 } else {
                                     buf.append::<u32>(0);
