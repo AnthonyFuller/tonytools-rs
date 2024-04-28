@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::cipher::{xtea_decrypt, xtea_encrypt};
@@ -167,6 +169,14 @@ struct ContainerMap {
     random: IndexMap<usize, Random>,
     switch: IndexMap<usize, Switch>,
     sequence: IndexMap<usize, Sequence>,
+}
+
+struct Indices {
+    global: i32,
+    wav: i32,
+    random: i32,
+    switch: i32,
+    sequence: i32
 }
 
 fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
@@ -545,7 +555,7 @@ impl DLGE {
         &mut self,
         buf: &mut ByteWriter,
         container: &mut DlgeType,
-        indices: &mut IndexMap<i32, i32>,
+        indices: &mut Indices,
         is_root: bool,
     ) -> LangResult<()> {
         match container {
@@ -641,7 +651,7 @@ impl DLGE {
                     }
                 }
 
-                indices[1] += 1;
+                indices.wav += 1;
             }
             DlgeType::Random(random) => {
                 let mut container = Container::new(0x02, 0, 0);
@@ -655,7 +665,7 @@ impl DLGE {
 
                             let weight_value = wav.weight.clone().unwrap();
 
-                            self.process_container(buf, &mut wav.clone().into(), indices, false)?;
+                            self.process_container(buf, &mut wav.clone().into(), indices.borrow_mut(), false)?;
 
                             let weight: u32 = match weight_value.as_str() {
                                 Some(str) => u32::from_str_radix(str, 16)?,
@@ -667,7 +677,7 @@ impl DLGE {
                             };
 
                             container.metadata.push(Metadata {
-                                type_index: ((0x02 << 12) | (indices[2] & 0xFFF)) as u16,
+                                type_index: ((0x02 << 12) | (indices.random & 0xFFF)) as u16,
                                 hashes: vec![weight],
                             });
                         }
@@ -678,11 +688,11 @@ impl DLGE {
                 }
 
                 container.write(buf);
-                indices[0] += 1;
-                indices[2] += 1;
+                indices.global += 1;
+                indices.random += 1;
             }
             DlgeType::Switch(switch) => {
-                if indices[3] != -1 {
+                if indices.switch != -1 {
                     return Err(LangError::InvalidContainer(0x03));
                 }
 
@@ -727,7 +737,7 @@ impl DLGE {
                         }
                     };
 
-                    self.process_container(buf, &mut child.clone(), indices, false)?;
+                    self.process_container(buf, &mut child.clone(), indices.borrow_mut(), false)?;
 
                     for case in source_cases {
                         cases.push(
@@ -739,33 +749,33 @@ impl DLGE {
                     }
 
                     container.metadata.push(Metadata {
-                        type_index: ((0x03 << 12) | (indices[3] & 0xFFF)) as u16,
+                        type_index: ((0x03 << 12) | (indices.switch & 0xFFF)) as u16,
                         hashes: cases,
                     });
 
-                    indices[3] += 1;
+                    indices.switch += 1;
                 }
 
                 container.write(buf);
-                indices[0] += 1;
-                indices[3] += 1;
+                indices.global += 1;
+                indices.switch += 1;
             }
             DlgeType::Sequence(sequence) => {
-                if indices[4] != -1 {
+                if indices.sequence != -1 {
                     return Err(LangError::InvalidContainer(0x04));
                 }
 
                 let container = Container::new(4, 0, 0);
 
                 for child in sequence.containers.clone() {
-                    self.process_container(buf, &mut child.clone(), indices, false)?;
+                    self.process_container(buf, &mut child.clone(), indices.borrow_mut(), false)?;
 
-                    indices[4] += 1;
+                    indices.sequence += 1;
                 }
 
                 container.write(buf);
-                indices[0] += 1;
-                indices[4] += 1;
+                indices.global += 1;
+                indices.sequence += 1;
             }
             _ => {}
         }
@@ -778,9 +788,16 @@ impl DLGE {
                 DlgeType::Sequence(_) => 4,
                 _ => 0x15,
             };
+
+            let index = match container {
+                DlgeType::WavFile(_) => indices.wav,
+                DlgeType::Random(_) | DlgeType::Switch(_) | DlgeType::Sequence(_) => indices.global,
+                _ => 0x15,
+            };
+
             buf.append::<u16>(
                 ((container_type << 12)
-                    | (indices[if container_type == 0x01 { 0x01 } else { 0x00 }] & 0xFFF))
+                    | (index & 0xFFF))
                     as u16,
             );
         }
@@ -815,15 +832,15 @@ impl DLGE {
         self.depends.insert(json.clng, String::from("1F"));
 
         // 0 is the "global" index
-        let mut indices = indexmap! {
-            0 => -1,
-            1 => -1,
-            2 => -1,
-            3 => -1,
-            4 => -1
+        let mut indices = Indices {
+            global: -1,
+            wav: -1,
+            random: -1,
+            switch: -1,
+            sequence: -1
         };
 
-        self.process_container(&mut buf, &mut json.root, &mut indices, true)?;
+        self.process_container(&mut buf, &mut json.root, indices.borrow_mut(), true)?;
 
         if old_langmap.is_some() {
             self.lang_map = old_langmap.unwrap();
