@@ -357,26 +357,30 @@ impl DLGE {
 
                     for metadata in container.metadata {
                         let r#type = metadata.type_index >> 12;
-                        let index = metadata.type_index & 0xFFF;
+                        let index = (metadata.type_index & 0xFFF) as usize;
 
                         if r#type != 0x01 {
                             return Err(LangError::InvalidReference(r#type as u8));
                         }
 
-                        containers.wav[index as usize].weight = match self.hex_precision {
+                        if !containers.wav.contains_key(&index) {
+                            return Err(LangError::InvalidReference(index as u8));
+                        }
+
+                        containers.wav.get_mut(&index).unwrap().weight = match self.hex_precision {
                             true => Some(format!("{:06X}", metadata.hashes[0]).into()),
                             false => Some(((metadata.hashes[0] as f64) / (0xFFFFFF as f64)).into()),
                         };
 
                         random
                             .containers
-                            .push(containers.wav[index as usize].clone().into());
-                        containers.wav.shift_remove(&(index as usize));
+                            .push(containers.wav.get(&index).unwrap().clone().into());
+                        containers.wav.swap_remove(&index);
                     }
 
                     containers.random.insert(indices[2], random);
-                    global_index += 1;
-                    globals[&global_index] = indices[2];
+                    global_index = global_index.wrapping_add(1);
+                    globals.insert(global_index, indices[2]);
                     indices[2] += 1;
                 }
                 0x03 => {
@@ -404,7 +408,7 @@ impl DLGE {
                         // But, we allow WavFile references in HMLT as they make sense, but currently it's unknown if the game allows for this.
 
                         let r#type = metadata.type_index >> 12;
-                        let index = metadata.type_index & 0xFFF;
+                        let index = (metadata.type_index & 0xFFF) as usize;
 
                         if r#type != 0x01 && r#type != 0x02 {
                             return Err(LangError::InvalidReference(r#type as u8));
@@ -423,26 +427,34 @@ impl DLGE {
 
                         match r#type {
                             0x01 => {
-                                containers.wav[index as usize].cases = cases.into();
+                                if !containers.wav.contains_key(&index) {
+                                    return Err(LangError::InvalidReference(index as u8));
+                                }
+
+                                containers.wav.get_mut(&index).unwrap().cases = cases.into();
                                 switch.containers.push(DlgeType::WavFile(
                                     containers.wav[index as usize].clone(),
                                 ));
-                                containers.wav.shift_remove(&(index as usize));
+                                containers.wav.swap_remove(&(index as usize));
                             }
                             0x02 => {
-                                containers.random[index as usize].cases = cases.into();
+                                if !containers.random.contains_key(&index) {
+                                    return Err(LangError::InvalidReference(index as u8));
+                                }
+
+                                containers.random.get_mut(&index).unwrap().cases = cases.into();
                                 switch
                                     .containers
                                     .push(containers.random[index as usize].clone().into());
-                                containers.random.shift_remove(&(index as usize));
+                                containers.random.swap_remove(&(index as usize));
                             }
                             _ => {}
                         }
                     }
 
                     containers.switch.insert(indices[3], switch);
-                    global_index += 1;
-                    globals[&global_index] = indices[3];
+                    global_index = global_index.wrapping_add(1);
+                    globals.insert(global_index, indices[3]);
                     indices[3] += 1;
                 }
                 0x04 => {
@@ -465,22 +477,34 @@ impl DLGE {
 
                         match r#type {
                             0x01 => {
+                                if !containers.wav.contains_key(&index) {
+                                    return Err(LangError::InvalidReference(index as u8));
+                                }
+
                                 sequence
                                     .containers
-                                    .push(containers.wav[index].clone().into());
-                                containers.wav.shift_remove(&index);
+                                    .push(containers.wav.get(&index).unwrap().clone().into());
+                                containers.wav.swap_remove(&index);
                             }
                             0x02 => {
+                                if !containers.random.contains_key(&index) {
+                                    return Err(LangError::InvalidReference(index as u8));
+                                }
+
                                 sequence
                                     .containers
-                                    .push(containers.random[index].clone().into());
-                                containers.random.shift_remove(&index);
+                                    .push(containers.random.get(&index).unwrap().clone().into());
+                                containers.random.swap_remove(&index);
                             }
                             0x03 => {
+                                if !containers.switch.contains_key(&index) {
+                                    return Err(LangError::InvalidReference(index as u8));
+                                }
+
                                 sequence
                                     .containers
-                                    .push(containers.switch[index].clone().into());
-                                containers.switch.shift_remove(&index);
+                                    .push(containers.switch.get(&index).unwrap().clone().into());
+                                containers.switch.swap_remove(&index);
                             }
                             _ => {}
                         }
