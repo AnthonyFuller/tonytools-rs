@@ -12,7 +12,7 @@ exclude = [".vscode/**", ".gitignore"]
 edition = "2021"
 
 [features]
-tools = ["dep:clap"]
+tools = []
 
 [[bin]]
 name = "hmlanguagetools-rs"
@@ -36,4 +36,4 @@ texture2ddecoder = "0.0.5"
 lz4_flex = "0.11.2"
 bitchomp = "0.2.2"
 strum_macros = "0.26.2"
-clap = { version = "4.5.4", features = ["derive"], optional = true }
+clap = { version = "4.5.4", features = ["derive"] }
