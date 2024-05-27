@@ -275,8 +275,9 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::DLGE => {
-                    let mut dlge = hmlanguages::dlge::DLGE::new(hashlist, version, None, None, false)
-                        .expect("Failed to get rebuilder for DLGE.");
+                    let mut dlge =
+                        hmlanguages::dlge::DLGE::new(hashlist, version, None, None, false)
+                            .expect("Failed to get rebuilder for DLGE.");
 
                     let json = dlge.rebuild(
                         String::from_utf8(
