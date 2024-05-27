@@ -532,10 +532,10 @@ impl DLGE {
         let root_index = (root & 0xFFF) as usize;
 
         j.root = match root_type {
-            0x01 => containers.wav[root_index].clone().into(),
-            0x02 => containers.random[root_index].clone().into(),
-            0x03 => containers.switch[root_index].clone().into(),
-            0x04 => containers.sequence[root_index].clone().into(),
+            0x01 => containers.wav.get(&root_index).unwrap().clone().into(),
+            0x02 => containers.random.get(&root_index).unwrap().clone().into(),
+            0x03 => containers.switch.get(&root_index).unwrap().clone().into(),
+            0x04 => containers.sequence.get(&root_index).unwrap().clone().into(),
             n => return Err(LangError::InvalidContainer(n as u8)),
         };
 
