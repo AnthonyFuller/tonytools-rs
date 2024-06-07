@@ -45,6 +45,7 @@ pub struct WavFile {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Random {
+    #[serde(skip_serializing_if = "Option::is_none")]
     cases: Option<Vec<String>>,
     containers: Vec<DlgeType>,
 }
