@@ -96,6 +96,18 @@ impl From<Sequence> for DlgeType {
     }
 }
 
+impl From<DlgeType> for i32 {
+    fn from(v: DlgeType) -> Self {
+        match v {
+            DlgeType::WavFile(_) => 1,
+            DlgeType::Random(_) => 2,
+            DlgeType::Switch(_) => 3,
+            DlgeType::Sequence(_) => 4,
+            _ => 0x15,
+        } 
+    }
+}
+
 pub struct DLGE {
     hashlist: HashList,
     version: Version,
@@ -677,7 +689,7 @@ impl DLGE {
                             };
 
                             container.metadata.push(Metadata {
-                                type_index: ((0x02 << 12) | (indices.random & 0xFFF)) as u16,
+                                type_index: ((0x01 << 12) | (indices.wav & 0xFFF)) as u16,
                                 hashes: vec![weight],
                             });
                         }
@@ -748,8 +760,14 @@ impl DLGE {
                         );
                     }
 
+                    let index = match child {
+                        DlgeType::WavFile(_) => indices.wav,
+                        DlgeType::Random(_) => indices.random,
+                        _ => return Err(LangError::InvalidReference(0x15)),
+                    };
+
                     container.metadata.push(Metadata {
-                        type_index: ((0x03 << 12) | (indices.switch & 0xFFF)) as u16,
+                        type_index: ((i32::from(child) << 12) | (index & 0xFFF)) as u16,
                         hashes: cases,
                     });
 
@@ -765,10 +783,21 @@ impl DLGE {
                     return Err(LangError::InvalidContainer(0x04));
                 }
 
-                let container = Container::new(4, 0, 0);
+                let mut container = Container::new(4, 0, 0);
 
                 for child in sequence.containers.clone() {
                     self.process_container(buf, &mut child.clone(), indices.borrow_mut(), false)?;
+
+                    let index = match child {
+                        DlgeType::WavFile(_) => indices.wav,
+                        DlgeType::Random(_) | DlgeType::Switch(_) => indices.global,
+                        _ => return Err(LangError::InvalidReference(0x15)),
+                    };
+
+                    container.metadata.push(Metadata {
+                        type_index: ((i32::from(child) << 12) | (index & 0xFFF)) as u16,
+                        hashes: vec![],
+                    });
 
                     indices.sequence += 1;
                 }
@@ -781,14 +810,6 @@ impl DLGE {
         }
 
         if is_root {
-            let container_type = match container {
-                DlgeType::WavFile(_) => 1,
-                DlgeType::Random(_) => 2,
-                DlgeType::Switch(_) => 3,
-                DlgeType::Sequence(_) => 4,
-                _ => 0x15,
-            };
-
             let index = match container {
                 DlgeType::WavFile(_) => indices.wav,
                 DlgeType::Random(_) | DlgeType::Switch(_) | DlgeType::Sequence(_) => indices.global,
@@ -796,7 +817,7 @@ impl DLGE {
             };
 
             buf.append::<u16>(
-                ((container_type << 12)
+                ((i32::from(container.clone()) << 12)
                     | (index & 0xFFF))
                     as u16,
             );
