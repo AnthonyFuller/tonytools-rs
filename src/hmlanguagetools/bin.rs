@@ -340,7 +340,7 @@ fn real_main() -> i32 {
                 }
             }
 
-            println!("Rebuilt {:?} to JSON!", args.file_type);
+            println!("Rebuilt JSON to {:?}!", args.file_type);
         }
         Commands::Batch { batch } => match batch {
             BatchCommands::Convert {
