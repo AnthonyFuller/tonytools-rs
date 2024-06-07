@@ -276,15 +276,15 @@ impl DLGE {
         // We setup these maps to store the various types of containers
         // and the latest index for final construction later.
         let mut containers = ContainerMap::default();
-        let mut indices = indexmap! {
-            1 => 0,
-            2 => 0,
-            3 => 0,
-            4 => 0
+        let mut indices = Indices {
+            global: -1,
+            wav: 0,
+            random: 0,
+            switch: 0,
+            sequence: 0,
         };
 
         // Weirdly, sequences reference by some "global id" for certain types so we store this here.
-        let mut global_index: u32 = u32::MAX;
         let mut globals: IndexMap<u32, usize> = IndexMap::new();
 
         while buf.cursor.len() != 2 {
@@ -368,8 +368,8 @@ impl DLGE {
                         }
                     }
 
-                    containers.wav.insert(indices[1], wav);
-                    indices[1] += 1;
+                    containers.wav.insert(indices.wav as usize, wav);
+                    indices.wav += 1;
                 }
                 0x02 => {
                     let container = Container::read(&mut buf)?;
@@ -401,10 +401,10 @@ impl DLGE {
                         containers.wav.swap_remove(&index);
                     }
 
-                    containers.random.insert(indices[2], random);
-                    global_index = global_index.wrapping_add(1);
-                    globals.insert(global_index, indices[2]);
-                    indices[2] += 1;
+                    containers.random.insert(indices.random as usize, random);
+                    indices.global += 1;
+                    globals.insert(indices.global as u32, indices.random as usize);
+                    indices.random += 1;
                 }
                 0x03 => {
                     let container = Container::read(&mut buf)?;
@@ -475,10 +475,10 @@ impl DLGE {
                         }
                     }
 
-                    containers.switch.insert(indices[3], switch);
-                    global_index = global_index.wrapping_add(1);
-                    globals.insert(global_index, indices[3]);
-                    indices[3] += 1;
+                    containers.switch.insert(indices.switch as usize, switch);
+                    indices.global += 1;
+                    globals.insert(indices.global as u32, indices.switch as usize);
+                    indices.switch += 1;
                 }
                 0x04 => {
                     // Sequence containers can contain any of the containers apart from sequence containers of course.
@@ -533,8 +533,8 @@ impl DLGE {
                         }
                     }
 
-                    containers.sequence.insert(indices[4], sequence);
-                    indices[4] += 1;
+                    containers.sequence.insert(indices.sequence as usize, sequence);
+                    indices.sequence += 1;
                 }
                 n => return Err(LangError::InvalidContainer(n)),
             }
