@@ -105,7 +105,7 @@ impl From<DlgeType> for i32 {
             DlgeType::Switch(_) => 3,
             DlgeType::Sequence(_) => 4,
             _ => 0x15,
-        } 
+        }
     }
 }
 
@@ -189,7 +189,7 @@ struct Indices {
     wav: i32,
     random: i32,
     switch: i32,
-    sequence: i32
+    sequence: i32,
 }
 
 fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
@@ -533,7 +533,9 @@ impl DLGE {
                         }
                     }
 
-                    containers.sequence.insert(indices.sequence as usize, sequence);
+                    containers
+                        .sequence
+                        .insert(indices.sequence as usize, sequence);
                     indices.sequence += 1;
                 }
                 n => return Err(LangError::InvalidContainer(n)),
@@ -678,7 +680,12 @@ impl DLGE {
 
                             let weight_value = wav.weight.clone().unwrap();
 
-                            self.process_container(buf, &mut wav.clone().into(), indices.borrow_mut(), false)?;
+                            self.process_container(
+                                buf,
+                                &mut wav.clone().into(),
+                                indices.borrow_mut(),
+                                false,
+                            )?;
 
                             let weight: u32 = match weight_value.as_str() {
                                 Some(str) => u32::from_str_radix(str, 16)?,
@@ -817,11 +824,7 @@ impl DLGE {
                 _ => 0x15,
             };
 
-            buf.append::<u16>(
-                ((i32::from(container.clone()) << 12)
-                    | (index & 0xFFF))
-                    as u16,
-            );
+            buf.append::<u16>(((i32::from(container.clone()) << 12) | (index & 0xFFF)) as u16);
         }
 
         Ok(())
@@ -859,7 +862,7 @@ impl DLGE {
             wav: -1,
             random: -1,
             switch: -1,
-            sequence: -1
+            sequence: -1,
         };
 
         self.process_container(&mut buf, &mut json.root, indices.borrow_mut(), true)?;
