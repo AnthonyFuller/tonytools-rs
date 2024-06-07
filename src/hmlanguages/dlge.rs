@@ -8,7 +8,7 @@ use crate::util::vec_of_strings;
 use crate::Version;
 use bitchomp::{ByteReader, ByteWriter, Endianness};
 use fancy_regex::Regex;
-use indexmap::{indexmap, IndexMap};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
 
