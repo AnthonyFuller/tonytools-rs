@@ -548,13 +548,14 @@ impl DLGE {
 
         let root = buf.read::<u16>()?;
         let root_type = root >> 12;
-        let root_index = (root & 0xFFF) as usize;
+        let root_index = (root & 0xFFF) as u32;
+        let global_index = globals.get(&root_index);
 
         j.root = match root_type {
-            0x01 => containers.wav.get(&root_index).unwrap().clone().into(),
-            0x02 => containers.random.get(&root_index).unwrap().clone().into(),
-            0x03 => containers.switch.get(globals.get(&(root_index as u32)).unwrap()).unwrap().clone().into(),
-            0x04 => containers.sequence.get(globals.get(&(root_index as u32)).unwrap()).unwrap().clone().into(),
+            0x01 => containers.wav.get(&(root_index as usize)).unwrap().clone().into(),
+            0x02 => containers.random.get(global_index.unwrap()).unwrap().clone().into(),
+            0x03 => containers.switch.get(global_index.unwrap()).unwrap().clone().into(),
+            0x04 => containers.sequence.get(global_index.unwrap()).unwrap().clone().into(),
             n => return Err(LangError::InvalidContainer(n as u8)),
         };
 
