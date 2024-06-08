@@ -45,15 +45,15 @@ enum Commands {
         lang_map: Option<String>,
 
         #[clap(long)]
-        #[clap(default_value_t = false)]
-        hex_precision: bool,
-
-        #[clap(long)]
         default_locale: Option<String>,
 
         #[clap(long)]
         #[clap(default_value_t = false)]
         symmetric: bool,
+
+        #[clap(long)]
+        #[clap(default_value_t = false)]
+        hex_precision: bool,
     },
     Rebuild {
         input: PathBuf,
@@ -88,6 +88,20 @@ enum BatchCommands {
 
         #[clap(default_value_t = false)]
         recursive: bool,
+
+        #[clap(long)]
+        lang_map: Option<String>,
+
+        #[clap(long)]
+        default_locale: Option<String>,
+
+        #[clap(long)]
+        #[clap(default_value_t = false)]
+        symmetric: bool,
+
+        #[clap(long)]
+        #[clap(default_value_t = false)]
+        hex_precision: bool,
     },
     Rebuild {
         input_folder: PathBuf,
@@ -96,6 +110,16 @@ enum BatchCommands {
 
         #[clap(default_value_t = false)]
         recursive: bool,
+
+        #[clap(long)]
+        lang_map: Option<String>,
+
+        #[clap(long)]
+        default_locale: Option<String>,
+
+        #[clap(long)]
+        #[clap(default_value_t = false)]
+        symmetric: bool,
     },
 }
 
@@ -386,6 +410,10 @@ fn real_main() -> i32 {
                 input_folder,
                 output_folder,
                 recursive,
+                lang_map,
+                default_locale,
+                symmetric,
+                hex_precision,
             } => {
                 if !input_folder.exists() {
                     println!("Input folder is invalid.");
@@ -396,6 +424,9 @@ fn real_main() -> i32 {
                 input_folder,
                 output_folder,
                 recursive,
+                lang_map,
+                default_locale,
+                symmetric,
             } => {
                 if !input_folder.exists() {
                     println!("Input folder is invalid.");
