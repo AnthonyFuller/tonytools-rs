@@ -52,7 +52,7 @@ enum Commands {
         default_locale: Option<String>,
 
         #[clap(long)]
-        #[clap(defualt_value_t = false)]
+        #[clap(default_value_t = false)]
         symmetric: bool,
     },
     Rebuild {
@@ -70,7 +70,7 @@ enum Commands {
         default_locale: Option<String>,
 
         #[clap(long)]
-        #[clap(defualt_value_t = false)]
+        #[clap(default_value_t = false)]
         symmetric: bool,
     },
     Batch {
