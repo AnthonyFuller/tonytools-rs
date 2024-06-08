@@ -542,6 +542,10 @@ impl DLGE {
             }
         }
 
+        if buf.size() - buf.cursor() != 2 {
+            return Err(LangError::DidNotReachEOF);
+        }
+
         let root = buf.read::<u16>()?;
         let root_type = root >> 12;
         let root_index = (root & 0xFFF) as usize;
@@ -549,8 +553,8 @@ impl DLGE {
         j.root = match root_type {
             0x01 => containers.wav.get(&root_index).unwrap().clone().into(),
             0x02 => containers.random.get(&root_index).unwrap().clone().into(),
-            0x03 => containers.switch.get(&root_index).unwrap().clone().into(),
-            0x04 => containers.sequence.get(&root_index).unwrap().clone().into(),
+            0x03 => containers.switch.get(globals.get(&(root_index as u32)).unwrap()).unwrap().clone().into(),
+            0x04 => containers.sequence.get(globals.get(&(root_index as u32)).unwrap()).unwrap().clone().into(),
             n => return Err(LangError::InvalidContainer(n as u8)),
         };
 
