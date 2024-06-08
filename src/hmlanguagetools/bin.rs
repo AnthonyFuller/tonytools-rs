@@ -215,8 +215,14 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::DLGE => {
-                    let dlge = hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, hex_precision)
-                        .expect("Failed to get converter for DLGE.");
+                    let dlge = hmlanguages::dlge::DLGE::new(
+                        hashlist,
+                        version,
+                        lang_map,
+                        default_locale,
+                        hex_precision,
+                    )
+                    .expect("Failed to get converter for DLGE.");
 
                     let json = dlge.convert(
                         fs::read(input)
@@ -338,9 +344,14 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::DLGE => {
-                    let mut dlge =
-                        hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, false)
-                            .expect("Failed to get rebuilder for DLGE.");
+                    let mut dlge = hmlanguages::dlge::DLGE::new(
+                        hashlist,
+                        version,
+                        lang_map,
+                        default_locale,
+                        false,
+                    )
+                    .expect("Failed to get rebuilder for DLGE.");
 
                     let json = dlge.rebuild(
                         String::from_utf8(
