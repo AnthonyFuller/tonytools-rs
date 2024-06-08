@@ -35,15 +35,43 @@ struct Args {
 enum Commands {
     Convert {
         input: PathBuf,
+
         output: PathBuf,
+
         #[clap(long)]
         meta_path: Option<PathBuf>,
+
+        #[clap(long)]
+        lang_map: Option<String>,
+
+        #[clap(long)]
+        #[clap(default_value_t = false)]
+        hex_precision: bool,
+
+        #[clap(long)]
+        default_locale: Option<String>,
+
+        #[clap(long)]
+        #[clap(defualt_value_t = false)]
+        symmetric: bool,
     },
     Rebuild {
         input: PathBuf,
+
         output: PathBuf,
+
         #[clap(long)]
         meta_path: Option<PathBuf>,
+
+        #[clap(long)]
+        lang_map: Option<String>,
+
+        #[clap(long)]
+        default_locale: Option<String>,
+
+        #[clap(long)]
+        #[clap(defualt_value_t = false)]
+        symmetric: bool,
     },
     Batch {
         #[command(subcommand)]
@@ -55,13 +83,17 @@ enum Commands {
 enum BatchCommands {
     Convert {
         input_folder: PathBuf,
+
         output_folder: PathBuf,
+
         #[clap(default_value_t = false)]
         recursive: bool,
     },
     Rebuild {
         input_folder: PathBuf,
+
         output_folder: PathBuf,
+
         #[clap(default_value_t = false)]
         recursive: bool,
     },
@@ -93,6 +125,10 @@ fn real_main() -> i32 {
             input,
             output,
             mut meta_path,
+            lang_map,
+            hex_precision,
+            default_locale,
+            symmetric,
         } => {
             if !input.exists() {
                 println!("Input path is invalid.");
@@ -117,7 +153,7 @@ fn real_main() -> i32 {
 
             match args.file_type {
                 Filetype::CLNG => {
-                    let clng = hmlanguages::clng::CLNG::new(version, None)
+                    let clng = hmlanguages::clng::CLNG::new(version, lang_map)
                         .expect("Failed to get converter for CLNG.");
 
                     let json = clng.convert(
@@ -155,7 +191,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::DLGE => {
-                    let dlge = hmlanguages::dlge::DLGE::new(hashlist, version, None, None, false)
+                    let dlge = hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, hex_precision)
                         .expect("Failed to get converter for DLGE.");
 
                     let json = dlge.convert(
@@ -174,7 +210,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, None, false)
+                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
                         .expect("Failed to get converter for LOCR.");
 
                     let json = locr.convert(
@@ -193,7 +229,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::RTLV => {
-                    let rtlv = hmlanguages::rtlv::RTLV::new(version, None)
+                    let rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map)
                         .expect("Failed to get converter for RTLV.");
 
                     let json = rtlv.convert(
@@ -219,6 +255,9 @@ fn real_main() -> i32 {
             input,
             output,
             meta_path,
+            lang_map,
+            default_locale,
+            symmetric,
         } => {
             if !input.exists() {
                 println!("Input path is invalid.");
@@ -233,7 +272,7 @@ fn real_main() -> i32 {
 
             match args.file_type {
                 Filetype::CLNG => {
-                    let clng = hmlanguages::clng::CLNG::new(version, None)
+                    let clng = hmlanguages::clng::CLNG::new(version, lang_map)
                         .expect("Failed to get rebuilder for CLNG.");
 
                     let json = clng.rebuild(
@@ -276,7 +315,7 @@ fn real_main() -> i32 {
                 }
                 Filetype::DLGE => {
                     let mut dlge =
-                        hmlanguages::dlge::DLGE::new(hashlist, version, None, None, false)
+                        hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, false)
                             .expect("Failed to get rebuilder for DLGE.");
 
                     let json = dlge.rebuild(
@@ -297,7 +336,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, None, false)
+                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
                         .expect("Failed to get rebuilder for LOCR.");
 
                     let json = locr.rebuild(
@@ -318,7 +357,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::RTLV => {
-                    let mut rtlv = hmlanguages::rtlv::RTLV::new(version, None)
+                    let mut rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map)
                         .expect("Failed to get rebuilder for RTLV.");
 
                     let json = rtlv.rebuild(
