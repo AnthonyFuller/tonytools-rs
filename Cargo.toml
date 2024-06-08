@@ -34,6 +34,6 @@ md5 = "0.7.0"
 intel_tex_2 = "0.4.0"
 texture2ddecoder = "0.0.5"
 lz4_flex = "0.11.2"
-bitchomp = "0.2.4"
+bitchomp = "0.2.5"
 strum_macros = "0.26.2"
 clap = { version = "4.5.4", features = ["derive"] }
