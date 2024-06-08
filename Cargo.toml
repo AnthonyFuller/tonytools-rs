@@ -7,7 +7,7 @@ keywords = ["glacier", "hitman"]
 authors = ["Anthony Fuller", "KingPEPSALT"]
 license = "LGPL-3.0-only"
 readme = "README.md"
-version = "0.4.0"
+version = "0.4.1"
 exclude = [".vscode/**", ".gitignore"]
 edition = "2021"
 
