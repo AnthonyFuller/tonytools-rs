@@ -555,7 +555,7 @@ impl DLGE {
             0x01 => containers.wav.get(&(root_index as usize)).unwrap().clone().into(),
             0x02 => containers.random.get(global_index.unwrap()).unwrap().clone().into(),
             0x03 => containers.switch.get(global_index.unwrap()).unwrap().clone().into(),
-            0x04 => containers.sequence.get(global_index.unwrap()).unwrap().clone().into(),
+            0x04 => containers.sequence.get(&(root_index as usize)).unwrap().clone().into(),
             n => return Err(LangError::InvalidContainer(n as u8)),
         };
 
