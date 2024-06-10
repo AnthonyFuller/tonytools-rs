@@ -191,7 +191,7 @@ fn real_main() -> i32 {
                         fs::write(output, serde_json::to_string(&clng).unwrap())
                             .expect("Failed to write converted JSON.");
                     } else {
-                        println!("Failed to parse CLNG file.");
+                        println!("Failed to parse CLNG file {:?}.", json.unwrap_err());
                         return 1;
                     }
                 }
@@ -210,7 +210,7 @@ fn real_main() -> i32 {
                         fs::write(output, serde_json::to_string(&ditl).unwrap())
                             .expect("Failed to write converted JSON.");
                     } else {
-                        println!("Failed to parse DITL file.");
+                        println!("Failed to parse DITL file {:?}.", json.unwrap_err());
                         return 1;
                     }
                 }
@@ -235,7 +235,7 @@ fn real_main() -> i32 {
                         fs::write(output, serde_json::to_string(&dlge).unwrap())
                             .expect("Failed to write converted JSON.");
                     } else {
-                        println!("Failed to parse DLGE file.");
+                        println!("Failed to parse DLGE file: {:?}.", json.unwrap_err());
                         return 1;
                     }
                 }
@@ -254,7 +254,7 @@ fn real_main() -> i32 {
                         fs::write(output, serde_json::to_string(&locr).unwrap())
                             .expect("Failed to write converted JSON.");
                     } else {
-                        println!("Failed to parse LOCR file.");
+                        println!("Failed to parse LOCR file {:?}.", json.unwrap_err());
                         return 1;
                     }
                 }
@@ -273,7 +273,7 @@ fn real_main() -> i32 {
                         fs::write(output, serde_json::to_string(&rtlv).unwrap())
                             .expect("Failed to write converted JSON.");
                     } else {
-                        println!("Failed to parse RTLV file.");
+                        println!("Failed to parse RTLV file {:?}.", json.unwrap_err());
                         return 1;
                     }
                 }
@@ -305,20 +305,20 @@ fn real_main() -> i32 {
                     let clng = hmlanguages::clng::CLNG::new(version, lang_map)
                         .expect("Failed to get rebuilder for CLNG.");
 
-                    let json = clng.rebuild(
+                    let rebuilt = clng.rebuild(
                         String::from_utf8(
                             std::fs::read(input).expect("Failed to read input file."),
                         )
                         .expect("Failed to utf-8 convert input file."),
                     );
 
-                    if let Ok(clng) = json {
+                    if let Ok(clng) = rebuilt {
                         fs::write(output, clng.file.as_slice())
                             .expect("Failed to write rebuilt file.");
                         fs::write(out_meta_path, clng.meta)
                             .expect("Failed to write rebuilt meta file.");
                     } else {
-                        println!("Failed to rebuild CLNG file.");
+                        println!("Failed to rebuild CLNG file {:?}.", rebuilt.unwrap_err());
                         return 1;
                     }
                 }
@@ -326,20 +326,20 @@ fn real_main() -> i32 {
                     let mut ditl = hmlanguages::ditl::DITL::new(hashlist)
                         .expect("Failed to get rebuilder for DITL.");
 
-                    let json = ditl.rebuild(
+                    let rebuilt = ditl.rebuild(
                         String::from_utf8(
                             std::fs::read(input).expect("Failed to read input file."),
                         )
                         .expect("Failed to utf-8 convert input file."),
                     );
 
-                    if let Ok(ditl) = json {
+                    if let Ok(ditl) = rebuilt {
                         fs::write(output, ditl.file.as_slice())
                             .expect("Failed to write rebuilt file.");
                         fs::write(out_meta_path, ditl.meta)
                             .expect("Failed to write rebuilt meta file.");
                     } else {
-                        println!("Failed to rebuild DITL file.");
+                        println!("Failed to rebuild DITL file {:?}.", rebuilt.unwrap_err());
                         return 1;
                     }
                 }
@@ -353,20 +353,20 @@ fn real_main() -> i32 {
                     )
                     .expect("Failed to get rebuilder for DLGE.");
 
-                    let json = dlge.rebuild(
+                    let rebuilt = dlge.rebuild(
                         String::from_utf8(
                             std::fs::read(input).expect("Failed to read input file."),
                         )
                         .expect("Failed to utf-8 convert input file."),
                     );
 
-                    if let Ok(dlge) = json {
+                    if let Ok(dlge) = rebuilt {
                         fs::write(output, dlge.file.as_slice())
                             .expect("Failed to write rebuilt file.");
                         fs::write(out_meta_path, dlge.meta)
                             .expect("Failed to write rebuilt meta file.");
                     } else {
-                        println!("Failed to rebuild DLGE file.");
+                        println!("Failed to rebuild DLGE file {:?}.", rebuilt.unwrap_err());
                         return 1;
                     }
                 }
@@ -374,20 +374,20 @@ fn real_main() -> i32 {
                     let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
                         .expect("Failed to get rebuilder for LOCR.");
 
-                    let json = locr.rebuild(
+                    let rebuilt = locr.rebuild(
                         String::from_utf8(
                             std::fs::read(input).expect("Failed to read input file."),
                         )
                         .expect("Failed to utf-8 convert input file."),
                     );
 
-                    if let Ok(locr) = json {
+                    if let Ok(locr) = rebuilt {
                         fs::write(output, locr.file.as_slice())
                             .expect("Failed to write rebuilt file.");
                         fs::write(out_meta_path, locr.meta)
                             .expect("Failed to write rebuilt meta file.");
                     } else {
-                        println!("Failed to rebuild LOCR file.");
+                        println!("Failed to rebuild LOCR file {:?}.", rebuilt.unwrap_err());
                         return 1;
                     }
                 }
@@ -395,20 +395,20 @@ fn real_main() -> i32 {
                     let mut rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map)
                         .expect("Failed to get rebuilder for RTLV.");
 
-                    let json = rtlv.rebuild(
+                    let rebuilt = rtlv.rebuild(
                         String::from_utf8(
                             std::fs::read(input).expect("Failed to read input file."),
                         )
                         .expect("Failed to utf-8 convert input file."),
                     );
 
-                    if let Ok(rtlv) = json {
+                    if let Ok(rtlv) = rebuilt {
                         fs::write(output, rtlv.file.as_slice())
                             .expect("Failed to write rebuilt file.");
                         fs::write(out_meta_path, rtlv.meta)
                             .expect("Failed to write rebuilt meta file.");
                     } else {
-                        println!("Failed to rebuild RTLV file.");
+                        println!("Failed to rebuild RTLV file {:?}.", rebuilt.unwrap_err());
                         return 1;
                     }
                 }

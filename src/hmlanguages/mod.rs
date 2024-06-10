@@ -59,6 +59,7 @@ impl Error for LangError {}
 
 pub type LangResult<T> = Result<T, LangError>;
 
+#[derive(Debug)]
 pub struct Rebuilt {
     pub file: Vec<u8>,
     pub meta: String,
