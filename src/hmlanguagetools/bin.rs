@@ -137,7 +137,11 @@ fn real_main() -> i32 {
         GameVersion::H2016 => Version::H2016,
     };
 
-    let hashlist_data = fs::read("hash_list.hmla");
+    let mut hashlist_path = std::env::current_exe().expect("Failed to get current exe path.");
+    hashlist_path.pop();
+    hashlist_path.push("hash_list.hmla");
+
+    let hashlist_data = fs::read(hashlist_path);
     if hashlist_data.is_err() {
         println!("Hash list not found!");
         return 1;
