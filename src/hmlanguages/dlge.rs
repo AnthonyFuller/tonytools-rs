@@ -156,7 +156,7 @@ impl Container {
         for _ in 0..buf.read::<u32>()? {
             container.metadata.push(Metadata {
                 type_index: buf.read::<u16>()?,
-                hashes: buf.read_sized_vector::<u32>()?,
+                hashes: buf.read_vec::<u32>()?,
             })
         }
 
@@ -352,7 +352,7 @@ impl DLGE {
 
                         if buf.peek::<u32>()? != 0 {
                             let data: serde_json::Value =
-                                xtea_decrypt(buf.read_sized_vector::<u8>()?)?.into();
+                                xtea_decrypt(buf.read_vec::<u8>()?)?.into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
@@ -536,6 +536,8 @@ impl DLGE {
                     containers
                         .sequence
                         .insert(indices.sequence as usize, sequence);
+                    indices.global += 1;
+                    globals.insert(indices.global as u32, indices.sequence as usize);
                     indices.sequence += 1;
                 }
                 n => return Err(LangError::InvalidContainer(n)),
@@ -572,7 +574,7 @@ impl DLGE {
                 .into(),
             0x04 => containers
                 .sequence
-                .get(&(root_index as usize))
+                .get(global_index.unwrap())
                 .unwrap()
                 .clone()
                 .into(),

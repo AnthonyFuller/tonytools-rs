@@ -97,7 +97,7 @@ impl LOCR {
                 let hash_num = buf.read::<u32>()?;
                 let hex: String = format!("{:08X}", hash_num);
                 let hash = self.hashlist.lines.get_by_left(&hash_num).unwrap_or(&hex);
-                let str_data = buf.read_sized_vector::<u8>()?;
+                let str_data = buf.read_vec::<u8>()?;
                 buf.seek(buf.cursor() + 1)?; // Skip null terminator
 
                 j.languages[language][hash] = match self.symmetric {
