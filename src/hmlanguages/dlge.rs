@@ -411,7 +411,7 @@ impl DLGE {
                     let mut switch = Switch {
                         switch_key: self
                             .hashlist
-                            .tags
+                            .switches
                             .get_by_left(&container.group_hash)
                             .unwrap_or(&format!("{:08X}", container.group_hash))
                             .clone(),
