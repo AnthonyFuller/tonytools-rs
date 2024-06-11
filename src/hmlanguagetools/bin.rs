@@ -1,7 +1,8 @@
-use std::{fs, path::PathBuf};
+use std::{default, fs, path::PathBuf};
 
 use clap::{Parser, Subcommand, ValueEnum};
-use tonytools::{hashlist::HashList, hmlanguages, Version};
+use glob::glob;
+use tonytools::{clng::CLNG, hashlist::HashList, hmlanguages, Version};
 
 #[derive(ValueEnum, Clone, Debug)]
 enum GameVersion {
@@ -86,6 +87,7 @@ enum BatchCommands {
 
         output_folder: PathBuf,
 
+        #[clap(long)]
         #[clap(default_value_t = false)]
         recursive: bool,
 
@@ -108,6 +110,7 @@ enum BatchCommands {
 
         output_folder: PathBuf,
 
+        #[clap(long)]
         #[clap(default_value_t = false)]
         recursive: bool,
 
@@ -121,6 +124,54 @@ enum BatchCommands {
         #[clap(default_value_t = false)]
         symmetric: bool,
     },
+}
+
+enum Converter {
+    CLNG(hmlanguages::clng::CLNG),
+    DITL(hmlanguages::ditl::DITL),
+    DLGE(hmlanguages::dlge::DLGE),
+    RTLV(hmlanguages::rtlv::RTLV),
+    LOCR(hmlanguages::locr::LOCR),
+}
+
+impl Converter {
+    fn new(
+        file_type: Filetype,
+        hashlist: HashList,
+        version: Version,
+        lang_map: Option<String>,
+        default_locale: Option<String>,
+        hex_precision: bool,
+        symmetric: bool,
+    ) -> Self {
+        match file_type {
+            Filetype::CLNG => {
+                let converter = hmlanguages::clng::CLNG::new(version, lang_map)
+                    .expect("Failed to get converter for CLNG.");
+                Converter::CLNG(converter)
+            }
+            Filetype::DITL => {
+                let converter = hmlanguages::ditl::DITL::new(hashlist)
+                    .expect("Failed to get converter for DITL.");
+                Converter::DITL(converter)
+            }
+            Filetype::DLGE => {
+                let converter = hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, hex_precision)
+                    .expect("Failed to get converter for DLGE.");
+                Converter::DLGE(converter)
+            }
+            Filetype::RTLV => {
+                let converter = hmlanguages::rtlv::RTLV::new(version, lang_map)
+                    .expect("Failed to get converter for RTLV.");
+                Converter::RTLV(converter)
+            }
+            Filetype::LOCR => {
+                let converter = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
+                    .expect("Failed to get converter for LOCR.");
+                Converter::LOCR(converter)
+            }
+        }
+    }
 }
 
 fn main() {
@@ -422,7 +473,7 @@ fn real_main() -> i32 {
         }
         Commands::Batch { batch } => match batch {
             BatchCommands::Convert {
-                input_folder,
+                mut input_folder,
                 output_folder,
                 recursive,
                 lang_map,
@@ -434,9 +485,120 @@ fn real_main() -> i32 {
                     println!("Input folder is invalid.");
                     return 1;
                 }
+
+                if !output_folder.exists() && fs::create_dir_all(output_folder.clone()).is_err() {
+                    println!("Failed to create output folder.");
+                    return 1;
+                }
+
+                if recursive {
+                    input_folder.push("**")
+                }
+
+                let ext = match args.file_type {
+                    Filetype::CLNG => "CLNG",
+                    Filetype::DITL => "DITL",
+                    Filetype::DLGE => "DLGE",
+                    Filetype::LOCR => "LOCR",
+                    Filetype::RTLV => "RTLV",
+                };
+
+                input_folder.push(format!("*.{}", ext));
+
+                let mut converter = Converter::new(
+                    args.file_type,
+                    hashlist,
+                    version,
+                    lang_map,
+                    default_locale,
+                    hex_precision,
+                    symmetric
+                );
+
+                for entry in glob(input_folder.to_str().expect("Failed to convert path.")).expect("Failed to read glob pattern") {
+                    if let Err(e) = entry {
+                        println!("Invalid path - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let path = entry.unwrap();
+
+                    let data = fs::read(path.clone());
+                    if let Err(e) = data {
+                        println!("Failed to load file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let meta_json = fs::read_to_string(PathBuf::from(format!("{}.meta.JSON", path.to_str().unwrap())));
+                    if let Err(e) = meta_json {
+                        println!("Failed to load meta - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let file_name = path.file_name().unwrap().to_str().unwrap();
+                    
+                    let json = match converter {
+                        Converter::CLNG(ref converter) => {
+                            let clng = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            if let Err(e) = clng {
+                                println!("Failed to convert file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            serde_json::to_string(&clng.unwrap()).expect("Failed to convert JSON to string.")
+                        }
+                        Converter::DLGE(ref converter) => {
+                            let dlge = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            if let Err(e) = dlge {
+                                println!("Failed to convert file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            serde_json::to_string(&dlge.unwrap()).expect("Failed to convert JSON to string.")
+                        }
+                        Converter::LOCR(ref converter) => {
+                            let locr = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            if let Err(e) = locr {
+                                println!("Failed to convert file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            serde_json::to_string(&locr.unwrap()).expect("Failed to convert JSON to string.")
+                        }
+                        Converter::DITL(ref converter) => {
+                            let ditl = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            if let Err(e) = ditl {
+                                println!("Failed to convert file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            serde_json::to_string(&ditl.unwrap()).expect("Failed to convert JSON to string.")
+                        }
+                        Converter::RTLV(ref converter) => {
+                            let rtlv = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            if let Err(e) = rtlv {
+                                println!("Failed to convert file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            serde_json::to_string(&rtlv.unwrap()).expect("Failed to convert JSON to string.")
+                        }
+                    };
+
+                    let mut output_path = output_folder.clone();
+                    output_path.push(file_name);
+                    output_path.set_extension(format!("{}.json", ext.to_lowercase()));
+
+                    if let Err(e) = fs::write(output_path, json) {
+                        println!("Failed to write output file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    println!("Processed {:?}", file_name);
+                }
             }
             BatchCommands::Rebuild {
-                input_folder,
+                mut input_folder,
                 output_folder,
                 recursive,
                 lang_map,
@@ -446,6 +608,126 @@ fn real_main() -> i32 {
                 if !input_folder.exists() {
                     println!("Input folder is invalid.");
                     return 1;
+                }
+
+                if !output_folder.exists() && fs::create_dir_all(output_folder.clone()).is_err() {
+                    println!("Failed to create output folder.");
+                    return 1;
+                }
+
+                if recursive {
+                    input_folder.push("**")
+                }
+
+                let ext = match args.file_type {
+                    Filetype::CLNG => "CLNG",
+                    Filetype::DITL => "DITL",
+                    Filetype::DLGE => "DLGE",
+                    Filetype::LOCR => "LOCR",
+                    Filetype::RTLV => "RTLV",
+                };
+
+                input_folder.push(format!("*.{}.json", ext.to_lowercase()));
+
+                let mut converter = Converter::new(
+                    args.file_type,
+                    hashlist,
+                    version,
+                    lang_map,
+                    default_locale,
+                    false,
+                    symmetric
+                );
+
+                for entry in glob(input_folder.to_str().expect("Failed to convert path.")).expect("Failed to read glob pattern") {
+                    if let Err(e) = entry {
+                        println!("Invalid path - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let path = entry.unwrap();
+
+                    let file = fs::read(path.clone());
+                    if let Err(e) = file {
+                        println!("Failed to load file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let data = String::from_utf8(file.unwrap());
+                    if let Err(e) = data {
+                        println!("Failed to load JSON file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    let file_name = path.file_name().unwrap().to_str().unwrap().split(".").collect::<Vec<&str>>()[0];
+                    
+                    let rebuilt = match converter {
+                        Converter::CLNG(ref converter) => {
+                            let clng = converter.rebuild(data.unwrap());
+                            if let Err(e) = clng {
+                                println!("Failed to rebuild file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            clng.unwrap()
+                        }
+                        Converter::DLGE(ref mut converter) => {
+                            let dlge = converter.rebuild(data.unwrap());
+                            if let Err(e) = dlge {
+                                println!("Failed to rebuild file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            dlge.unwrap()
+                        }
+                        Converter::LOCR(ref converter) => {
+                            let locr = converter.rebuild(data.unwrap());
+                            if let Err(e) = locr {
+                                println!("Failed to rebuild file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            locr.unwrap()
+                        }
+                        Converter::DITL(ref mut converter) => {
+                            let ditl = converter.rebuild(data.unwrap());
+                            if let Err(e) = ditl {
+                                println!("Failed to rebuild file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            ditl.unwrap()
+                        }
+                        Converter::RTLV(ref mut converter) => {
+                            let rtlv = converter.rebuild(data.unwrap());
+                            if let Err(e) = rtlv {
+                                println!("Failed to rebuild file - \"{:?}\"", e);
+                                continue;
+                            }
+
+                            rtlv.unwrap()
+                        }
+                    };
+
+                    let mut rebuilt_path = output_folder.clone();
+                    rebuilt_path.push(file_name);
+                    rebuilt_path.set_extension(ext);
+
+                    let mut meta_path = output_folder.clone();
+                    meta_path.push(file_name);
+                    meta_path.set_extension(format!("{}.meta.JSON", ext));
+
+                    if let Err(e) = fs::write(rebuilt_path, rebuilt.file) {
+                        println!("Failed to write rebuilt file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    if let Err(e) = fs::write(meta_path, rebuilt.meta) {
+                        println!("Failed to write meta file - \"{:?}\"", e);
+                        continue;
+                    }
+
+                    println!("Processed {:?}.{:?}.json", file_name, ext.to_lowercase());
                 }
             }
         },

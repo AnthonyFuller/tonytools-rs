@@ -38,3 +38,4 @@ bitchomp = "0.2.7"
 #bitchomp = { git = "https://github.com/KingPEPSALT/bitchomp", branch = "dev-debug" }
 strum_macros = "0.26.2"
 clap = { version = "4.5.4", features = ["derive"] }
+glob = "0.3.1"
