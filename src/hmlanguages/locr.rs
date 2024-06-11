@@ -30,11 +30,11 @@ impl LOCR {
     pub fn new(
         hashlist: HashList,
         version: Version,
-        lang_map: Option<String>,
+        lang_map: Option<Vec<String>>,
         symmetric: bool,
     ) -> LangResult<Self> {
         let lang_map = if let Some(map) = lang_map {
-            map.split(',').map(|s| s.to_string()).collect()
+            map
         } else {
             match version {
                 Version::H2016 | Version::H2 => vec_of_strings![

@@ -23,9 +23,9 @@ pub struct CLNG {
 }
 
 impl CLNG {
-    pub fn new(version: Version, lang_map: Option<String>) -> LangResult<Self> {
+    pub fn new(version: Version, lang_map: Option<Vec<String>>) -> LangResult<Self> {
         let lang_map = if let Some(map) = lang_map {
-            map.split(',').map(|s| s.to_string()).collect()
+            map
         } else {
             match version {
                 Version::H2016 | Version::H2 => vec_of_strings![

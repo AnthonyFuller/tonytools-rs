@@ -213,13 +213,13 @@ impl DLGE {
     pub fn new(
         hashlist: HashList,
         version: Version,
-        lang_map: Option<String>,
+        lang_map: Option<Vec<String>>,
         default_locale: Option<String>,
         hex_precision: bool,
     ) -> LangResult<Self> {
         let custom_langmap = lang_map.is_some();
         let lang_map = if let Some(map) = lang_map {
-            map.split(',').map(|s| s.to_string()).collect()
+            map
         } else {
             match version {
                 Version::H2016 => vec_of_strings![

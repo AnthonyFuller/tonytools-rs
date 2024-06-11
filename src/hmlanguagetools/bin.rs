@@ -139,7 +139,7 @@ impl Converter {
         file_type: Filetype,
         hashlist: HashList,
         version: Version,
-        lang_map: Option<String>,
+        lang_map: Option<Vec<String>>,
         default_locale: Option<String>,
         hex_precision: bool,
         symmetric: bool,
@@ -227,12 +227,14 @@ fn real_main() -> i32 {
                 }
             }
 
+            let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+
             let meta_json =
                 fs::read_to_string(meta_path.unwrap()).expect("Failed to read meta file.");
 
             match args.file_type {
                 Filetype::CLNG => {
-                    let clng = hmlanguages::clng::CLNG::new(version, lang_map)
+                    let clng = hmlanguages::clng::CLNG::new(version, lang_map_vec)
                         .expect("Failed to get converter for CLNG.");
 
                     let json = clng.convert(
@@ -273,7 +275,7 @@ fn real_main() -> i32 {
                     let dlge = hmlanguages::dlge::DLGE::new(
                         hashlist,
                         version,
-                        lang_map,
+                        lang_map_vec,
                         default_locale,
                         hex_precision,
                     )
@@ -295,7 +297,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
+                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
                         .expect("Failed to get converter for LOCR.");
 
                     let json = locr.convert(
@@ -314,7 +316,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::RTLV => {
-                    let rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map)
+                    let rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map_vec)
                         .expect("Failed to get converter for RTLV.");
 
                     let json = rtlv.convert(
@@ -355,9 +357,11 @@ fn real_main() -> i32 {
                 PathBuf::from(format!("{}.meta.JSON", input.to_str().unwrap()))
             };
 
+            let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+
             match args.file_type {
                 Filetype::CLNG => {
-                    let clng = hmlanguages::clng::CLNG::new(version, lang_map)
+                    let clng = hmlanguages::clng::CLNG::new(version, lang_map_vec)
                         .expect("Failed to get rebuilder for CLNG.");
 
                     let rebuilt = clng.rebuild(
@@ -402,7 +406,7 @@ fn real_main() -> i32 {
                     let mut dlge = hmlanguages::dlge::DLGE::new(
                         hashlist,
                         version,
-                        lang_map,
+                        lang_map_vec,
                         default_locale,
                         false,
                     )
@@ -426,7 +430,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
+                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
                         .expect("Failed to get rebuilder for LOCR.");
 
                     let rebuilt = locr.rebuild(
@@ -447,7 +451,7 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::RTLV => {
-                    let mut rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map)
+                    let mut rtlv = hmlanguages::rtlv::RTLV::new(version, lang_map_vec)
                         .expect("Failed to get rebuilder for RTLV.");
 
                     let rebuilt = rtlv.rebuild(
@@ -491,6 +495,8 @@ fn real_main() -> i32 {
                     return 1;
                 }
 
+                let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+
                 if recursive {
                     input_folder.push("**")
                 }
@@ -509,7 +515,7 @@ fn real_main() -> i32 {
                     args.file_type,
                     hashlist,
                     version,
-                    lang_map,
+                    lang_map_vec,
                     default_locale,
                     hex_precision,
                     symmetric
@@ -619,6 +625,8 @@ fn real_main() -> i32 {
                     input_folder.push("**")
                 }
 
+                let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+
                 let ext = match args.file_type {
                     Filetype::CLNG => "CLNG",
                     Filetype::DITL => "DITL",
@@ -633,7 +641,7 @@ fn real_main() -> i32 {
                     args.file_type,
                     hashlist,
                     version,
-                    lang_map,
+                    lang_map_vec,
                     default_locale,
                     false,
                     symmetric
