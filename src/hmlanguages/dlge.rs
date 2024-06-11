@@ -37,9 +37,9 @@ pub struct WavFile {
     weight: Option<serde_json::Value>,
     soundtag: String,
     #[serde(rename = "defaultWav")]
-    default_wav: String,
+    default_wav: Option<String>,
     #[serde(rename = "defaultFfx")]
-    default_ffx: String,
+    default_ffx: Option<String>,
     languages: Map<String, serde_json::Value>,
 }
 
@@ -308,8 +308,8 @@ impl DLGE {
                             .get_by_left(&tag_hash)
                             .unwrap_or(&format!("{:08X}", tag_hash))
                             .clone(),
-                        default_wav: String::from(""),
-                        default_ffx: String::from(""),
+                        default_wav: None,
+                        default_ffx: None,
                         languages: Map::new(),
                     };
 
@@ -326,12 +326,12 @@ impl DLGE {
                         if wav_index != u32::MAX && ffx_index != u32::MAX {
                             if *language == self.default_locale {
                                 wav.default_wav =
-                                    meta.hash_reference_data[wav_index as usize].hash.clone();
+                                    Some(meta.hash_reference_data[wav_index as usize].hash.clone());
                                 wav.default_ffx =
-                                    meta.hash_reference_data[ffx_index as usize].hash.clone();
+                                    Some(meta.hash_reference_data[ffx_index as usize].hash.clone());
 
                                 wav.wav_name =
-                                    get_wav_name(&wav.default_wav, &wav.default_ffx, wav_hash);
+                                    get_wav_name(&wav.default_wav.clone().unwrap(), &wav.default_ffx.clone().unwrap(), wav_hash);
                             } else {
                                 subtitle = json!({
                                     "wav": meta
@@ -618,16 +618,16 @@ impl DLGE {
                         buf.append::<u32>(0x00);
                     }
 
-                    if *language == self.default_locale {
+                    if *language == self.default_locale && wav.default_wav.is_some() && wav.default_ffx.is_some() {
                         buf.append(
                             self.add_depend(
-                                wav.default_wav.clone(),
+                                wav.default_wav.clone().unwrap(),
                                 format!("{:02X}", 0x80 + index),
                             ),
                         );
                         buf.append(
                             self.add_depend(
-                                wav.default_ffx.clone(),
+                                wav.default_ffx.clone().unwrap(),
                                 format!("{:02X}", 0x80 + index),
                             ),
                         );
