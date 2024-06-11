@@ -1,8 +1,8 @@
-use std::{default, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use clap::{Parser, Subcommand, ValueEnum};
 use glob::glob;
-use tonytools::{clng::CLNG, hashlist::HashList, hmlanguages, Version};
+use tonytools::{hashlist::HashList, hmlanguages, Version};
 
 #[derive(ValueEnum, Clone, Debug)]
 enum GameVersion {
@@ -505,7 +505,7 @@ fn real_main() -> i32 {
 
                 input_folder.push(format!("*.{}", ext));
 
-                let mut converter = Converter::new(
+                let converter = Converter::new(
                     args.file_type,
                     hashlist,
                     version,
