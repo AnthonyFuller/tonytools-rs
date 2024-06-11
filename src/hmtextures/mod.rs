@@ -1,6 +1,6 @@
 use std::{convert::Infallible, io};
 
-use bitchomp::bytereader::ByteReaderError;
+use bitchomp::ByteReaderError;
 
 pub mod hm2;
 pub mod hm2016;

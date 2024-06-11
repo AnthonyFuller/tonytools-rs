@@ -8,7 +8,7 @@ use crate::util::{
     vec_of_strings,
 };
 use crate::Version;
-use bitchomp::{ByteReader, ByteWriter, Endianness};
+use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClngJson {
@@ -50,7 +50,7 @@ impl CLNG {
             languages: Map::new(),
         };
 
-        let bools = buf.read_n::<u8>(buf.len())?;
+        let bools = buf.read_n::<u8>(buf.len())?.flatten();
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;
         j.hash = meta.hash_path.unwrap_or(meta.hash_value);
 

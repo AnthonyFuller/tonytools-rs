@@ -5,7 +5,7 @@ use serde_json::Map;
 use super::hashlist::HashList;
 use super::{LangResult, Rebuilt};
 use crate::util::rpkg::{self, ResourceMeta};
-use bitchomp::{ByteReader, ByteWriter, Endianness};
+use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DitlJson {
@@ -38,8 +38,8 @@ impl DITL {
             soundtags: Map::new(),
         };
 
-        let count = buf.read::<u32>()?;
-        let hashes = buf.read_n::<u32>((count * 2) as usize)?; // Hashes and depend index
+        let count = buf.read::<u32>()?.inner();
+        let hashes = buf.read_n::<u32>((count * 2) as usize)?.flatten(); // Hashes and depend index
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;
         j.hash = meta.hash_path.unwrap_or(meta.hash_value);
 

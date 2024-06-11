@@ -1,6 +1,6 @@
 use std::{error::Error, num::ParseIntError, string::FromUtf8Error};
 
-use bitchomp::{bytereader::ByteReaderError, bytewriter::ByteWriterError};
+use bitchomp::{ByteReaderError, ByteWriterError};
 use strum_macros::Display;
 
 pub mod clng;

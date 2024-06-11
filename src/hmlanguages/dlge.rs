@@ -6,7 +6,7 @@ use crate::util::cipher::{xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
 use crate::util::vec_of_strings;
 use crate::Version;
-use bitchomp::{ByteReader, ByteWriter, Endianness};
+use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 use fancy_regex::Regex;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -147,16 +147,16 @@ impl Container {
 
     fn read(buf: &mut ByteReader) -> LangResult<Self> {
         let mut container = Self {
-            r#type: buf.read::<u8>()?,
-            group_hash: buf.read::<u32>()?,
-            default_hash: buf.read::<u32>()?,
+            r#type: buf.read::<u8>()?.inner(),
+            group_hash: buf.read::<u32>()?.inner(),
+            default_hash: buf.read::<u32>()?.inner(),
             metadata: vec![],
         };
 
-        for _ in 0..buf.read::<u32>()? {
+        for _ in 0..buf.read::<u32>()?.inner() {
             container.metadata.push(Metadata {
-                type_index: buf.read::<u16>()?,
-                hashes: buf.read_vec::<u32>()?,
+                type_index: buf.read::<u16>()?.inner(),
+                hashes: buf.read_sized_vector::<u32>()?.flatten(),
             })
         }
 
@@ -266,10 +266,10 @@ impl DLGE {
 
         let meta: rpkg::ResourceMeta = serde_json::from_str(meta_json.as_str())?;
         j.hash = meta.hash_path.unwrap_or(meta.hash_value);
-        j.ditl = meta.hash_reference_data[buf.read::<u32>()? as usize]
+        j.ditl = meta.hash_reference_data[buf.read::<u32>()?.inner() as usize]
             .hash
             .clone();
-        j.clng = meta.hash_reference_data[buf.read::<u32>()? as usize]
+        j.clng = meta.hash_reference_data[buf.read::<u32>()?.inner() as usize]
             .hash
             .clone();
 
@@ -288,14 +288,14 @@ impl DLGE {
         let mut globals: IndexMap<u32, usize> = IndexMap::new();
 
         while buf.cursor.len() != 2 {
-            match buf.peek::<u8>()? {
+            match buf.peek::<u8>()?.inner() {
                 0x01 => {
                     buf.seek(buf.cursor() + 1)?;
-                    let tag_hash = buf.read::<u32>()?;
-                    let wav_hash = buf.read::<u32>()?;
+                    let tag_hash = buf.read::<u32>()?.inner();
+                    let wav_hash = buf.read::<u32>()?.inner();
 
                     if self.version != Version::H2016 {
-                        buf.read::<u32>()?;
+                        buf.read::<u32>()?.inner();
                     }
 
                     let mut wav = WavFile {
@@ -315,11 +315,11 @@ impl DLGE {
 
                     for language in self.lang_map.as_slice() {
                         if self.version == Version::H2016 {
-                            buf.read::<u32>()?;
+                            buf.read::<u32>()?.inner();
                         }
 
-                        let wav_index = buf.read::<u32>()?;
-                        let ffx_index = buf.read::<u32>()?;
+                        let wav_index = buf.read::<u32>()?.inner();
+                        let ffx_index = buf.read::<u32>()?.inner();
 
                         let mut subtitle: serde_json::Value = serde_json::Value::Null;
 
@@ -350,9 +350,9 @@ impl DLGE {
                             }
                         }
 
-                        if buf.peek::<u32>()? != 0 {
+                        if buf.peek::<u32>()?.inner() != 0 {
                             let data: serde_json::Value =
-                                xtea_decrypt(buf.read_vec::<u8>()?)?.into();
+                                xtea_decrypt(buf.read_sized_vector::<u8>()?.flatten())?.into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
@@ -548,7 +548,7 @@ impl DLGE {
             return Err(LangError::DidNotReachEOF);
         }
 
-        let root = buf.read::<u16>()?;
+        let root = buf.read::<u16>()?.inner();
         let root_type = root >> 12;
         let root_index = (root & 0xFFF) as u32;
         let global_index = globals.get(&root_index);

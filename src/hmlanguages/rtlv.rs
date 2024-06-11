@@ -1,4 +1,4 @@
-use bitchomp::{ByteReader, ByteWriter, Endianness};
+use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
@@ -159,8 +159,8 @@ impl GameRtlv {
 
     fn read_string_vec(buf: &mut ByteReader) -> LangResult<Vec<String>> {
         let next = buf.cursor() + 24;
-        let start: u64 = buf.read()?;
-        let end: u64 = buf.read()?;
+        let start: u64 = buf.read()?.inner();
+        let end: u64 = buf.read()?.inner();
         let size = (end - start) / 16;
 
         buf.seek(start as usize)?;
@@ -168,12 +168,12 @@ impl GameRtlv {
         let mut vec: Vec<String> = Vec::new();
 
         for _ in 0..size {
-            let len = buf.read::<u64>()? & !0x40000000;
-            let ptr: u64 = buf.read()?;
+            let len = buf.read::<u64>()?.inner() & !0x40000000;
+            let ptr: u64 = buf.read()?.inner();
             let cursor = buf.cursor();
 
             buf.seek(ptr as usize)?;
-            vec.push(xtea_decrypt(buf.read_n(len as usize)?)?);
+            vec.push(xtea_decrypt(buf.read_n(len as usize)?.flatten())?);
 
             buf.seek(cursor)?;
         }
@@ -185,8 +185,8 @@ impl GameRtlv {
 
     fn read_rid_vec(buf: &mut ByteReader) -> LangResult<Vec<u64>> {
         let cursor = buf.cursor() + 24;
-        let start: u64 = buf.read()?;
-        let end: u64 = buf.read()?;
+        let start: u64 = buf.read()?.inner();
+        let end: u64 = buf.read()?.inner();
         let size = (end - start) / 8;
 
         buf.seek(start as usize)?;
@@ -194,8 +194,8 @@ impl GameRtlv {
         let mut vec: Vec<u64> = Vec::new();
 
         for _ in 0..size {
-            let high: u64 = buf.read::<u32>()? as u64;
-            let low: u64 = buf.read::<u32>()? as u64;
+            let high: u64 = buf.read::<u32>()?.inner() as u64;
+            let low: u64 = buf.read::<u32>()?.inner() as u64;
 
             vec.push((high << 32) | low);
         }
@@ -236,7 +236,7 @@ impl RTLV {
     pub fn convert(&self, data: &[u8], meta_json: String) -> LangResult<RtlvJson> {
         let mut buf = ByteReader::new(data, Endianness::Little);
 
-        if buf.read::<u32>()? != 0x314E4942 {
+        if buf.read::<u32>()?.inner() != 0x314E4942 {
             return Err(LangError::InvalidInput);
         }
 

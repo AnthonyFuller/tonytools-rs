@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use bitchomp::{ByteReader, Endianness};
+use bitchomp::{ByteReader, Endianness, ChompFlatten};
 use std::io::BufRead;
 
 use crate::{
@@ -34,26 +34,24 @@ impl Texture {
         let mut texture = Texture::default();
         texture.metadata.version = Version::H2016;
 
-        match buf.read::<u16>() {
-            Ok(1) => Ok(1),
-            Ok(_) => Err(Error::InvalidMagic),
-            Err(e) => Err(e.into()),
-        }?;
+        if buf.read::<u16>()?.inner() != 1 {
+            return Err(Error::InvalidMagic);
+        }
 
-        texture.metadata.r#type = match buf.read::<u16>() {
-            Ok(n @ 0..=3) => n.try_into().map_err(|_| Error::UnknownType),
-            Ok(_) => Err(Error::UnknownType),
-            Err(e) => Err(e.into()),
-        }?;
+        let r#type = buf.read::<u16>()?.inner();
+        if r#type > 3 {
+            return Err(Error::UnknownType);
+        }
+        texture.metadata.r#type = r#type.try_into().unwrap();
 
-        let is_texd = (buf.read::<u32>()? == 0x4000) && is_texd;
+        let is_texd = (buf.read::<u32>()?.inner() == 0x4000) && is_texd;
 
         // Skip file size
         buf.consume(0x4);
 
-        texture.metadata.flags = buf.read()?;
+        texture.metadata.flags = buf.read()?.inner();
 
-        if let [w, h] = buf.read_n::<u16>(2)?[..] {
+        if let [w, h] = buf.read_n::<u16>(2)?.flatten()[..] {
             [texture.width, texture.height] = [w as u32, h as u32];
         };
 
@@ -63,25 +61,25 @@ impl Texture {
             texture.height /= sf;
         }
 
-        if let Ok(fmt) = buf.read::<u16>()?.try_into() {
+        if let Ok(fmt) = buf.read::<u16>()?.inner().try_into() {
             texture.metadata.format = fmt;
         };
 
         // Skip mip count + default mip
         buf.consume(0x2);
 
-        texture.metadata.interpret_as = buf.read()?;
+        texture.metadata.interpret_as = buf.read()?.inner();
 
-        if buf.read::<u8>()? != 0 {
+        if buf.read::<u8>()?.inner() != 0 {
             return Err(Error::InvalidDimensions);
         }
 
-        texture.metadata.interpol_mode = buf.read::<u8>()? as u16;
+        texture.metadata.interpol_mode = buf.read::<u8>()?.inner() as u16;
 
         // Skip mip sizes
         buf.consume(0xE * 4);
 
-        if let [a_s, a_o] = buf.read_n::<u32>(2)?[..] {
+        if let [a_s, a_o] = buf.read_n::<u32>(2)?.flatten()[..] {
             [texture.atlas_size, texture.atlas_offset] = [a_s, a_o];
         }
 

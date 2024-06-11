@@ -4,7 +4,7 @@ use crate::util::cipher::{symmetric_decrypt, symmetric_encrypt, xtea_decrypt, xt
 use crate::util::rpkg::{self, ResourceMeta};
 use crate::util::vec_of_strings;
 use crate::Version;
-use bitchomp::{ByteReader, ByteWriter, Endianness};
+use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
@@ -77,13 +77,13 @@ impl LOCR {
         }
 
         let cursor = buf.cursor();
-        let num_languages = ((buf.read::<u32>()? - is_locr_v2 as u32) / 4) as usize;
+        let num_languages = ((buf.read::<u32>()?.inner() - is_locr_v2 as u32) / 4) as usize;
         if num_languages > self.lang_map.len() {
             return Err(LangError::InvalidLanguageMap);
         }
         buf.seek(cursor)?;
 
-        let offsets = buf.read_n::<u32>(num_languages)?;
+        let offsets = buf.read_n::<u32>(num_languages)?.flatten();
         for (i, offset) in offsets.iter().enumerate() {
             let language = self.lang_map.get(i).expect("Something went wrong");
             j.languages.insert(language.clone(), Map::new().into());
@@ -93,11 +93,11 @@ impl LOCR {
             }
             buf.seek(*offset as usize)?;
 
-            for _ in 0..buf.read::<u32>()? {
-                let hash_num = buf.read::<u32>()?;
+            for _ in 0..buf.read::<u32>()?.inner() {
+                let hash_num = buf.read::<u32>()?.inner();
                 let hex: String = format!("{:08X}", hash_num);
                 let hash = self.hashlist.lines.get_by_left(&hash_num).unwrap_or(&hex);
-                let str_data = buf.read_vec::<u8>()?;
+                let str_data = buf.read_sized_vector::<u8>()?.flatten();
                 buf.seek(buf.cursor() + 1)?; // Skip null terminator
 
                 j.languages[language][hash] = match self.symmetric {

@@ -7,7 +7,7 @@ keywords = ["glacier", "hitman"]
 authors = ["Anthony Fuller", "KingPEPSALT"]
 license = "LGPL-3.0-only"
 readme = "README.md"
-version = "0.4.9"
+version = "0.4.10"
 exclude = [".vscode/**", ".gitignore"]
 edition = "2021"
 
@@ -34,8 +34,8 @@ md5 = "0.7.0"
 intel_tex_2 = "0.4.0"
 texture2ddecoder = "0.0.5"
 lz4_flex = "0.11.2"
-bitchomp = "0.2.7"
-#bitchomp = { git = "https://github.com/KingPEPSALT/bitchomp", branch = "dev-debug" }
+#bitchomp = "0.2.7"
+bitchomp = { git = "https://github.com/KingPEPSALT/bitchomp", branch = "dev-debug" }
 strum_macros = "0.26.2"
 clap = { version = "4.5.4", features = ["derive"] }
 glob = "0.3.1"
