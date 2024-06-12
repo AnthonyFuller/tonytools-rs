@@ -59,7 +59,7 @@ impl CLNG {
                 return Err(LangError::InvalidLanguageMap);
             }
             let lang = self.lang_map.get(i).unwrap();
-            j.languages[lang] = (*bools.get(i).unwrap() == 1u8).into();
+            j.languages.insert(lang.clone(), (*bools.get(i).unwrap() == 1u8).into());
         }
 
         Ok(j)
