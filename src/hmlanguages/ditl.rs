@@ -10,9 +10,9 @@ use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DitlJson {
     #[serde(rename = "$schema")]
-    schema: String,
-    hash: String,
-    soundtags: Map<String, serde_json::Value>,
+    pub schema: String,
+    pub hash: String,
+    pub soundtags: Map<String, serde_json::Value>,
 }
 
 pub struct DITL {

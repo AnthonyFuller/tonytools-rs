@@ -15,52 +15,52 @@ use serde_json::{json, Map};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DlgeJson {
     #[serde(rename = "$schema")]
-    schema: String,
-    hash: String,
+    pub schema: String,
+    pub hash: String,
     #[serde(rename = "DITL")]
-    ditl: String,
+    pub ditl: String,
     #[serde(rename = "CLNG")]
-    clng: String,
+    pub clng: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    langmap: Option<String>,
+    pub langmap: Option<String>,
     #[serde(rename = "rootContainer")]
-    root: DlgeType,
+    pub root: DlgeType,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WavFile {
     #[serde(rename = "wavName")]
-    wav_name: String,
+    pub wav_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    cases: Option<Vec<String>>,
+    pub cases: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    weight: Option<serde_json::Value>,
-    soundtag: String,
+    pub weight: Option<serde_json::Value>,
+    pub soundtag: String,
     #[serde(rename = "defaultWav")]
-    default_wav: Option<String>,
+    pub default_wav: Option<String>,
     #[serde(rename = "defaultFfx")]
-    default_ffx: Option<String>,
-    languages: Map<String, serde_json::Value>,
+    pub default_ffx: Option<String>,
+    pub languages: Map<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Random {
     #[serde(skip_serializing_if = "Option::is_none")]
-    cases: Option<Vec<String>>,
-    containers: Vec<DlgeType>,
+    pub cases: Option<Vec<String>>,
+    pub containers: Vec<DlgeType>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Switch {
     #[serde(rename = "switchKey")]
-    switch_key: String,
-    default: String,
-    containers: Vec<DlgeType>,
+    pub switch_key: String,
+    pub default: String,
+    pub containers: Vec<DlgeType>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Sequence {
-    containers: Vec<DlgeType>,
+    pub containers: Vec<DlgeType>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

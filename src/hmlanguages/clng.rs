@@ -13,9 +13,9 @@ use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClngJson {
     #[serde(rename = "$schema")]
-    schema: String,
-    hash: String,
-    languages: Map<String, serde_json::Value>,
+    pub schema: String,
+    pub hash: String,
+    pub languages: Map<String, serde_json::Value>,
 }
 
 pub struct CLNG {
