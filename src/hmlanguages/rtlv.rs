@@ -163,9 +163,13 @@ impl GameRtlv {
         let end: u64 = buf.read()?.inner();
         let size = (end - start) / 16;
 
-        buf.seek(start as usize)?;
-
         let mut vec: Vec<String> = Vec::new();
+
+        if start == u64::MAX {
+            return Ok(vec);
+        }
+
+        buf.seek(start as usize)?;
 
         for _ in 0..size {
             let len = buf.read::<u64>()?.inner() & !0x40000000;
