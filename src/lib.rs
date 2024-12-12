@@ -2,7 +2,6 @@
 #![feature(generic_const_exprs)]
 
 pub mod hmlanguages;
-pub(crate) mod hmtextures;
 pub(crate) mod util;
 
 #[derive(Default, Debug, PartialEq, Copy, Clone)]
