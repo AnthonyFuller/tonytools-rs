@@ -1,7 +1,7 @@
-use std::{error::Error, num::ParseIntError, string::FromUtf8Error};
+use std::{num::ParseIntError, string::FromUtf8Error};
 
 use bitchomp::{ByteReaderError, ByteWriterError};
-use strum_macros::Display;
+use thiserror::Error;
 
 pub mod clng;
 pub mod ditl;
@@ -10,18 +10,39 @@ pub mod hashlist;
 pub mod locr;
 pub mod rtlv;
 
-#[derive(Debug, Display)]
+#[derive(Debug, Error)]
 pub enum LangError {
+    #[error("invalid language map")]
     InvalidLanguageMap,
+
+    #[error("did not reach end-of-file")]
     DidNotReachEOF,
+
+    #[error("json error: {0}")]
     JsonError(serde_json::Error),
+
+    #[error("unsupported version")]
     UnsupportedVersion,
+
+    #[error("byter reader error: {0}")]
     ByteReaderError(ByteReaderError),
+
+    #[error("byte writer error: {0}")]
     ByteWriterError(ByteWriterError),
+
+    #[error("utf-8 error: {0}")]
     Utf8Error(FromUtf8Error),
+
+    #[error("invalid container: {0}")]
     InvalidContainer(u8),
+
+    #[error("invalid reference: {0}")]
     InvalidReference(u8),
+
+    #[error("parse int error: {0}")]
     ParseIntError(ParseIntError),
+
+    #[error("invalid input")]
     InvalidInput,
 }
 
@@ -54,8 +75,6 @@ impl From<FromUtf8Error> for LangError {
         LangError::Utf8Error(err)
     }
 }
-
-impl Error for LangError {}
 
 pub type LangResult<T> = Result<T, LangError>;
 

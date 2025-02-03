@@ -11,8 +11,8 @@ use serde_json::Map;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LocrJson {
-    #[serde(rename = "$schema")]
-    pub schema: String,
+    #[serde(rename = "$schema", skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>,
     pub hash: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symmetric: Option<bool>,
@@ -66,7 +66,7 @@ impl LOCR {
         };
 
         let mut j = LocrJson {
-            schema: "https://tonytools.win/schemas/locr.schema.json".into(),
+            schema: Some("https://tonytools.win/schemas/locr.schema.json".into()),
             hash: "".into(),
             symmetric: None,
             languages: Map::new(),

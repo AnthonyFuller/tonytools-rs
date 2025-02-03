@@ -14,8 +14,8 @@ use serde_json::{json, Map};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DlgeJson {
-    #[serde(rename = "$schema")]
-    pub schema: String,
+    #[serde(rename = "$schema", skip_serializing_if = "Option::is_none")]
+    pub schema: Option<String>,
     pub hash: String,
     #[serde(rename = "DITL")]
     pub ditl: String,
@@ -252,7 +252,7 @@ impl DLGE {
         let mut buf = ByteReader::new(data, Endianness::Little);
 
         let mut j = DlgeJson {
-            schema: "https://tonytools.win/schemas/dlge.schema.json".into(),
+            schema: Some("https://tonytools.win/schemas/dlge.schema.json".into()),
             hash: "".into(),
             ditl: "".into(),
             clng: "".into(),
