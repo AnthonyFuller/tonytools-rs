@@ -4,15 +4,23 @@ description = "A library for handling certain Glacier 2 formats."
 homepage = "https://tonytools.win"
 repository = "https://github.com/AnthonyFuller/tonytools-rs"
 keywords = ["glacier", "hitman"]
-authors = ["Anthony Fuller", "KingPEPSALT"]
+authors = ["Anthony Fuller", "KingPEPSALT", "Reece Dunham"]
 license = "LGPL-3.0-only"
 readme = "README.md"
-version = "0.6.0"
+version = "0.7.0"
 exclude = [".vscode/**", ".gitignore"]
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+lto = true
+
 [features]
-tools = []
+tools = ["clap", "glob"]
+wasm = ["wasm-bindgen", "console_error_panic_hook"]
+default = []
 
 [[bin]]
 name = "hmlanguagetools-rs"
@@ -34,6 +42,10 @@ md5 = "0.7.0"
 lz4_flex = "0.11.2"
 bitchomp = "0.3.1"
 strum_macros = "0.26.2"
-clap = { version = "4.5.4", features = ["derive"] }
-glob = "0.3.1"
+clap = { version = "4.5.4", features = ["derive"], optional = true }
+glob = { version = "0.3.1", optional = true }
 thiserror = "2.0.11"
+
+# WASM dependencies
+wasm-bindgen = { version = "0.2", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
