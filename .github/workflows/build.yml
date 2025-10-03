@@ -30,9 +30,9 @@ jobs:
         run: yarn install
 
       - name: Build hmlanguagetools-rs
-        run: cargo build --release --bin hmlanguagetools-rs
+        run: cargo build --release --bin hmlanguagetools-rs --features="tools"
 
-      - name: Build WASM optimized
+      - name: Build WASM
         run: make wasm-optimized
 
       - name: Upload hmlanguagetools-rs binary
@@ -59,7 +59,7 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
 
       - name: Build hmlanguagetools-rs
-        run: cargo build --release --bin hmlanguagetools-rs
+        run: cargo build --release --bin hmlanguagetools-rs --features="tools"
 
       - name: Upload hmlanguagetools-rs binary
         uses: actions/upload-artifact@v4
