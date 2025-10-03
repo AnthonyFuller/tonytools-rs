@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 lto = true
 
 [features]
-tools = ["clap", "glob"]
+tools = ["clap", "glob", "num", "lz4_flex"]
 wasm = ["wasm-bindgen", "console_error_panic_hook"]
 default = []
 
@@ -31,6 +31,7 @@ path = "src/hmlanguagetools/bin.rs"
 bimap = "0.6.3"
 crc32fast = "1.4.0"
 once_cell = "1.19.0"
+num = { version = "0.4.1", optional = true }
 regex-lite = "0.1.7"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.114", features = ["preserve_order"] }
@@ -38,12 +39,11 @@ extended-tea = "0.1.1"
 byteorder = "1.5.0"
 indexmap = "2.2.5"
 md5 = "0.8.0"
+lz4_flex = { version = "0.11.2", optional = true }
 bitchomp = "0.3.1"
 strum_macros = "0.27.2"
 clap = { version = "4.5.4", features = ["derive"], optional = true }
 glob = { version = "0.3.1", optional = true }
 thiserror = "2.0.11"
-
-# WASM dependencies
 wasm-bindgen = { version = "0.2", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
