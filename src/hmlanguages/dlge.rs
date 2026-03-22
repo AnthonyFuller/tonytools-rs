@@ -7,8 +7,9 @@ use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
 use crate::util::vec_of_strings;
 use crate::Version;
 use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
-use fancy_regex::Regex;
+use regex_lite::Regex;
 use indexmap::IndexMap;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
 
@@ -192,21 +193,22 @@ struct Indices {
     sequence: i32,
 }
 
-fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
+static RE_FILENAME: Lazy<Regex> = Lazy::new(|| Regex::new(r"([^/]+)\.(wav|animset)$").unwrap());
+
+pub fn get_wav_name(wav_hash: &str, ffx_hash: &str, hash: u32) -> String {
     if is_valid_hash(wav_hash) || is_valid_hash(ffx_hash) {
         return format!("{:08X}", hash);
     }
 
-    let r = Regex::new(r"([^\/]*(?=\.wav))").unwrap();
-    let r_ffx = Regex::new(r"([^\/]*(?=\.animset))").unwrap();
-
-    match r.find(wav_hash).unwrap() {
-        Some(hash) => hash.as_str().into(),
-        None => match r_ffx.find(ffx_hash).unwrap() {
-            Some(hash) => hash.as_str().into(),
-            None => format!("{:08X}", hash),
-        },
+    if let Some(caps) = RE_FILENAME.captures(wav_hash) {
+        return caps[1].to_string();
     }
+
+    if let Some(caps) = RE_FILENAME.captures(ffx_hash) {
+        return caps[1].to_string();
+    }
+
+    format!("{:08X}", hash)
 }
 
 impl DLGE {
@@ -907,5 +909,34 @@ impl DLGE {
                 self.depends.clone(),
             ))?,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_wav_hash() {
+        // When wav_hash is valid, should return formatted hash
+        assert_eq!(get_wav_name("VALID_HASH", "ALSO_VALID", 0x11111111), "11111111");
+        // Extract filename from simple .wav path
+        assert_eq!(get_wav_name("sound.wav", "", 0x12345678), "sound");
+        assert_eq!(get_wav_name("audio.wav", "invalid", 0x12345678), "audio");
+        // Extract filename from .wav with directory path
+        assert_eq!(get_wav_name("path/to/sound.wav", "", 0x12345678), "sound");
+        assert_eq!(get_wav_name("a/b/c/file.wav", "", 0x12345678), "file");
+        assert_eq!(get_wav_name("/absolute/path/audio.wav", "", 0x12345678), "audio");
+        // Extract filename from simple .animset path
+        assert_eq!(get_wav_name("", "effect.animset", 0x12345678), "effect");
+        assert_eq!(get_wav_name("invalid", "animation.animset", 0x12345678), "animation");
+        // Extract filename from .animset with directory path
+        assert_eq!(get_wav_name("", "path/to/effect.animset", 0x12345678), "effect");
+        assert_eq!(get_wav_name("", "a/b/c/anim.animset", 0x12345678), "anim");
+        assert_eq!(get_wav_name("", "/absolute/path/file.animset", 0x12345678), "file");
+        // Fallback
+        assert_eq!(get_wav_name("invalid", "invalid", 0xDEADBEEF), "DEADBEEF");
+        assert_eq!(get_wav_name("noextension", "alsonoext", 0x99999999), "99999999");
+        assert_eq!(get_wav_name("", "", 0x00000000), "00000000");
     }
 }

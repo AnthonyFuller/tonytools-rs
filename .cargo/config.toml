@@ -1,0 +1,11 @@
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "opt-level=z",                  # Optimize for size
+    "-C", "panic=abort",                  # Use abort on panic (smaller binary)
+    "-C", "codegen-units=1",              # Single codegen unit for better optimization
+    "-C", "strip=symbols",                # Strip debug symbols
+    "-C", "link-arg=-s",                  # Strip symbols in linker
+    "-C", "link-arg=--gc-sections",       # Remove unused sections
+    "-C", "link-arg=--no-export-dynamic", # Prevent dynamic exports
+    "-C", "link-arg=--import-memory",     # Use imported memory (no file system access)
+]

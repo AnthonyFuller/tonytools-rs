@@ -4,6 +4,9 @@
 pub mod hmlanguages;
 pub(crate) mod util;
 
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
 #[derive(Default, Debug, PartialEq, Copy, Clone)]
 pub enum Version {
     Unknown = -1,

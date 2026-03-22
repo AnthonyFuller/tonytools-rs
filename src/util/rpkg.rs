@@ -1,6 +1,7 @@
-use fancy_regex::Regex;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use regex_lite::Regex;
+use once_cell::sync::Lazy;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResourceMeta {
@@ -57,12 +58,33 @@ pub struct ResourceDependency {
     pub flag: String,
 }
 
+static HASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[0-9A-F]{16}$").unwrap());
+
 pub fn is_valid_hash(hash: &str) -> bool {
-    let re = Regex::new(r"^[0-9A-F]{16}$").unwrap();
-    re.is_match(hash).unwrap()
+    HASH_RE.is_match(hash)
 }
 
 pub fn compute_hash(hash: &str) -> String {
     let hash = format!("{:X}", md5::compute(hash));
     format!("00{}", &hash[2..16])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_hash() {
+        assert_eq!(is_valid_hash("0123456789ABCDEF"), true);
+        assert_eq!(is_valid_hash("0123456789abcdef"), false);
+        assert_eq!(is_valid_hash("f00bar"), false);
+        assert_eq!(is_valid_hash("1751D6Q65KNDDABF"), false);
+        assert_eq!(is_valid_hash("5FFABEEADD2CFFFE"), true);
+    }
+
+    #[test]
+    fn test_compute_hash() {
+        let input = "hello";
+        assert_eq!(compute_hash(input), "0041402ABC4B2A76");
+    }
 }
