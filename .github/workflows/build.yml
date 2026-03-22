@@ -54,8 +54,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - uses: jdx/mise-action@v4
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build hmlanguagetools-rs
         run: cargo build --release --bin hmlanguagetools-rs --features="tools"
