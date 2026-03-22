@@ -1,0 +1,4 @@
+[tools]
+node = "24"
+rust = "nightly"
+yarn = "4.10.3"
