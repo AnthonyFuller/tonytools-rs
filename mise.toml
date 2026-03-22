@@ -1,4 +1,4 @@
 [tools]
 node = "24"
-rust = "nightly"
+rust = { version = "nightly", targets = "wasm32-unknown-unknown" }
 yarn = "4.10.3"
