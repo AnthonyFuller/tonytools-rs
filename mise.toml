@@ -2,3 +2,6 @@
 node = "24"
 rust = { version = "nightly", targets = "wasm32-unknown-unknown" }
 yarn = "4.10.3"
+
+[hooks]
+postinstall = "rustup target add wasm32-unknown-unknown"
