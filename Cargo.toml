@@ -39,7 +39,7 @@ extended-tea = "0.1.1"
 byteorder = "1.5.0"
 indexmap = "2.2.5"
 md5 = "0.8.0"
-lz4_flex = { version = "0.11.2", optional = true }
+lz4_flex = { version = "0.13.0", optional = true }
 bitchomp = "0.3.1"
 strum_macros = "0.27.2"
 clap = { version = "4.5.4", features = ["derive"], optional = true }
