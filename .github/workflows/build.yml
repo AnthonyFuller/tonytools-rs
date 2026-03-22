@@ -13,11 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          targets: wasm32-unknown-unknown
-
       - uses: jdx/mise-action@v4
 
       - uses: Swatinem/rust-cache@v2
