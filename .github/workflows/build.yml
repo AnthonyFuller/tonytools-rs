@@ -11,20 +11,28 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Rust nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
+      - uses: jdx/mise-action@v4
 
-      - name: Enable Corepack
-        run: corepack enable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v5
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies
         run: yarn install
@@ -36,13 +44,13 @@ jobs:
         run: make wasm-optimized
 
       - name: Upload hmlanguagetools-rs binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hmlanguagetools-rs-linux
           path: target/release/hmlanguagetools-rs
 
       - name: Upload WASM binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tonytools-wasm
           path: target/wasm32-unknown-unknown/release/tonytools_optimized.wasm
@@ -53,7 +61,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Rust nightly
         uses: dtolnay/rust-toolchain@nightly
@@ -62,7 +70,7 @@ jobs:
         run: cargo build --release --bin hmlanguagetools-rs --features="tools"
 
       - name: Upload hmlanguagetools-rs binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hmlanguagetools-rs-windows
           path: target/release/hmlanguagetools-rs.exe
