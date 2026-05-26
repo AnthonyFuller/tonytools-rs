@@ -5,7 +5,7 @@ use serde_json::Map;
 use super::hashlist::HashList;
 use super::{LangResult, Rebuilt};
 use crate::util::rpkg::{self, ResourceMeta};
-use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
+use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DitlJson {

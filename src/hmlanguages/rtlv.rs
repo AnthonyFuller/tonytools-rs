@@ -1,12 +1,15 @@
-use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
+use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::{
-    Version, util::{
-        cipher::{xtea_decrypt, xtea_encrypt}, get_language_map, rpkg::{ResourceMeta, compute_hash, is_valid_hash}
-    }
+    util::{
+        cipher::{xtea_decrypt, xtea_encrypt},
+        get_language_map,
+        rpkg::{compute_hash, is_valid_hash, ResourceMeta},
+    },
+    Version,
 };
 
 use super::{LangError, LangResult, Rebuilt};
@@ -135,7 +138,12 @@ impl GameRtlv {
         Ok(())
     }
 
-    fn write_string_vec(&mut self, data: Vec<String>, offset: usize, version: Version) -> LangResult<Vec<u8>> {
+    fn write_string_vec(
+        &mut self,
+        data: Vec<String>,
+        offset: usize,
+        version: Version,
+    ) -> LangResult<Vec<u8>> {
         let mut buf = ByteWriter::new(Endianness::Little);
 
         // Write the string structure

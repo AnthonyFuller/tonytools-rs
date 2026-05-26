@@ -2,7 +2,7 @@ use byteorder::LE;
 use extended_tea::XTEA;
 use once_cell::sync::Lazy;
 
-use crate::{LangError, Version, hmlanguages::LangResult};
+use crate::{hmlanguages::LangResult, LangError, Version};
 
 static XTEA_WOA: Lazy<XTEA> =
     Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
@@ -15,7 +15,9 @@ pub fn xtea_decrypt(version: Version, data: Vec<u8>) -> LangResult<String> {
 
     match version {
         Version::KNT => XTEA_KNT.decipher_u8slice::<LE>(&data, &mut out_data),
-        Version::H2016 | Version::H2 | Version::H3 => XTEA_WOA.decipher_u8slice::<LE>(&data, &mut out_data),
+        Version::H2016 | Version::H2 | Version::H3 => {
+            XTEA_WOA.decipher_u8slice::<LE>(&data, &mut out_data)
+        }
         _ => return Err(LangError::UnsupportedVersion),
     };
 
@@ -34,7 +36,9 @@ pub fn xtea_encrypt(version: Version, str: &str) -> LangResult<Vec<u8>> {
 
     match version {
         Version::KNT => XTEA_KNT.encipher_u8slice::<LE>(&str, &mut out_data),
-        Version::H2016 | Version::H2 | Version::H3 => XTEA_WOA.encipher_u8slice::<LE>(&str, &mut out_data),
+        Version::H2016 | Version::H2 | Version::H3 => {
+            XTEA_WOA.encipher_u8slice::<LE>(&str, &mut out_data)
+        }
         _ => return Err(LangError::UnsupportedVersion),
     };
 

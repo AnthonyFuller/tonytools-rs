@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
-use regex_lite::Regex;
 use once_cell::sync::Lazy;
+use regex_lite::Regex;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResourceMeta {

@@ -1,10 +1,10 @@
 use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::cipher::{symmetric_decrypt, symmetric_encrypt, xtea_decrypt, xtea_encrypt};
-use crate::util::rpkg::{self, ResourceMeta};
 use crate::util::get_language_map;
+use crate::util::rpkg::{self, ResourceMeta};
 use crate::Version;
-use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
+use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Map;

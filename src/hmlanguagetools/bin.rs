@@ -157,8 +157,14 @@ impl Converter {
                 Converter::DITL(converter)
             }
             Filetype::DLGE => {
-                let converter = hmlanguages::dlge::DLGE::new(hashlist, version, lang_map, default_locale, hex_precision)
-                    .expect("Failed to get converter for DLGE.");
+                let converter = hmlanguages::dlge::DLGE::new(
+                    hashlist,
+                    version,
+                    lang_map,
+                    default_locale,
+                    hex_precision,
+                )
+                .expect("Failed to get converter for DLGE.");
                 Converter::DLGE(converter)
             }
             Filetype::RTLV => {
@@ -167,8 +173,9 @@ impl Converter {
                 Converter::RTLV(converter)
             }
             Filetype::LOCR => {
-                let converter = hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
-                    .expect("Failed to get converter for LOCR.");
+                let converter =
+                    hmlanguages::locr::LOCR::new(hashlist, version, lang_map, symmetric)
+                        .expect("Failed to get converter for LOCR.");
                 Converter::LOCR(converter)
             }
         }
@@ -229,7 +236,8 @@ fn real_main() -> i32 {
                 }
             }
 
-            let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+            let lang_map_vec: Option<Vec<String>> =
+                lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
 
             let meta_json =
                 fs::read_to_string(meta_path.unwrap()).expect("Failed to read meta file.");
@@ -299,8 +307,9 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
-                        .expect("Failed to get converter for LOCR.");
+                    let locr =
+                        hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
+                            .expect("Failed to get converter for LOCR.");
 
                     let json = locr.convert(
                         fs::read(input)
@@ -359,7 +368,8 @@ fn real_main() -> i32 {
                 PathBuf::from(format!("{}.meta.JSON", input.to_str().unwrap()))
             };
 
-            let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+            let lang_map_vec: Option<Vec<String>> =
+                lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
 
             match args.file_type {
                 Filetype::CLNG => {
@@ -432,8 +442,9 @@ fn real_main() -> i32 {
                     }
                 }
                 Filetype::LOCR => {
-                    let locr = hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
-                        .expect("Failed to get rebuilder for LOCR.");
+                    let locr =
+                        hmlanguages::locr::LOCR::new(hashlist, version, lang_map_vec, symmetric)
+                            .expect("Failed to get rebuilder for LOCR.");
 
                     let rebuilt = locr.rebuild(
                         String::from_utf8(
@@ -497,7 +508,8 @@ fn real_main() -> i32 {
                     return 1;
                 }
 
-                let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+                let lang_map_vec: Option<Vec<String>> =
+                    lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
 
                 if recursive {
                     input_folder.push("**")
@@ -520,10 +532,12 @@ fn real_main() -> i32 {
                     lang_map_vec,
                     default_locale,
                     hex_precision,
-                    symmetric
+                    symmetric,
                 );
 
-                for entry in glob(input_folder.to_str().expect("Failed to convert path.")).expect("Failed to read glob pattern") {
+                for entry in glob(input_folder.to_str().expect("Failed to convert path."))
+                    .expect("Failed to read glob pattern")
+                {
                     if let Err(e) = entry {
                         println!("Invalid path - \"{:?}\"", e);
                         continue;
@@ -537,59 +551,72 @@ fn real_main() -> i32 {
                         continue;
                     }
 
-                    let meta_json = fs::read_to_string(PathBuf::from(format!("{}.meta.JSON", path.to_str().unwrap())));
+                    let meta_json = fs::read_to_string(PathBuf::from(format!(
+                        "{}.meta.JSON",
+                        path.to_str().unwrap()
+                    )));
                     if let Err(e) = meta_json {
                         println!("Failed to load meta - \"{:?}\"", e);
                         continue;
                     }
 
                     let file_name = path.file_name().unwrap().to_str().unwrap();
-                    
+
                     let json = match converter {
                         Converter::CLNG(ref converter) => {
-                            let clng = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            let clng =
+                                converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
                             if let Err(e) = clng {
                                 println!("Failed to convert file - \"{:?}\"", e);
                                 continue;
                             }
 
-                            serde_json::to_string(&clng.unwrap()).expect("Failed to convert JSON to string.")
+                            serde_json::to_string(&clng.unwrap())
+                                .expect("Failed to convert JSON to string.")
                         }
                         Converter::DLGE(ref converter) => {
-                            let dlge = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            let dlge =
+                                converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
                             if let Err(e) = dlge {
                                 println!("Failed to convert file - \"{:?}\"", e);
                                 continue;
                             }
 
-                            serde_json::to_string(&dlge.unwrap()).expect("Failed to convert JSON to string.")
+                            serde_json::to_string(&dlge.unwrap())
+                                .expect("Failed to convert JSON to string.")
                         }
                         Converter::LOCR(ref converter) => {
-                            let locr = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            let locr =
+                                converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
                             if let Err(e) = locr {
                                 println!("Failed to convert file - \"{:?}\"", e);
                                 continue;
                             }
 
-                            serde_json::to_string(&locr.unwrap()).expect("Failed to convert JSON to string.")
+                            serde_json::to_string(&locr.unwrap())
+                                .expect("Failed to convert JSON to string.")
                         }
                         Converter::DITL(ref converter) => {
-                            let ditl = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            let ditl =
+                                converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
                             if let Err(e) = ditl {
                                 println!("Failed to convert file - \"{:?}\"", e);
                                 continue;
                             }
 
-                            serde_json::to_string(&ditl.unwrap()).expect("Failed to convert JSON to string.")
+                            serde_json::to_string(&ditl.unwrap())
+                                .expect("Failed to convert JSON to string.")
                         }
                         Converter::RTLV(ref converter) => {
-                            let rtlv = converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
+                            let rtlv =
+                                converter.convert(data.unwrap().as_slice(), meta_json.unwrap());
                             if let Err(e) = rtlv {
                                 println!("Failed to convert file - \"{:?}\"", e);
                                 continue;
                             }
 
-                            serde_json::to_string(&rtlv.unwrap()).expect("Failed to convert JSON to string.")
+                            serde_json::to_string(&rtlv.unwrap())
+                                .expect("Failed to convert JSON to string.")
                         }
                     };
 
@@ -627,7 +654,8 @@ fn real_main() -> i32 {
                     input_folder.push("**")
                 }
 
-                let lang_map_vec: Option<Vec<String>> = lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
+                let lang_map_vec: Option<Vec<String>> =
+                    lang_map.map(|map| map.split(',').map(|s| s.to_string()).collect());
 
                 let ext = match args.file_type {
                     Filetype::CLNG => "CLNG",
@@ -646,10 +674,12 @@ fn real_main() -> i32 {
                     lang_map_vec,
                     default_locale,
                     false,
-                    symmetric
+                    symmetric,
                 );
 
-                for entry in glob(input_folder.to_str().expect("Failed to convert path.")).expect("Failed to read glob pattern") {
+                for entry in glob(input_folder.to_str().expect("Failed to convert path."))
+                    .expect("Failed to read glob pattern")
+                {
                     if let Err(e) = entry {
                         println!("Invalid path - \"{:?}\"", e);
                         continue;
@@ -669,8 +699,14 @@ fn real_main() -> i32 {
                         continue;
                     }
 
-                    let file_name = path.file_name().unwrap().to_str().unwrap().split(".").collect::<Vec<&str>>()[0];
-                    
+                    let file_name = path
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .split(".")
+                        .collect::<Vec<&str>>()[0];
+
                     let rebuilt = match converter {
                         Converter::CLNG(ref converter) => {
                             let clng = converter.rebuild(data.unwrap());

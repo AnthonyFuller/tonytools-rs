@@ -6,10 +6,10 @@ use crate::util::cipher::{xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, is_valid_hash, ResourceMeta};
 use crate::util::vec_of_strings;
 use crate::Version;
-use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
-use regex_lite::Regex;
+use bitchomp::{ByteReader, ByteWriter, ChompFlatten, Endianness};
 use indexmap::IndexMap;
 use once_cell::sync::Lazy;
+use regex_lite::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map};
 
@@ -332,8 +332,11 @@ impl DLGE {
                                 wav.default_ffx =
                                     Some(meta.hash_reference_data[ffx_index as usize].hash.clone());
 
-                                wav.wav_name =
-                                    get_wav_name(&wav.default_wav.clone().unwrap(), &wav.default_ffx.clone().unwrap(), wav_hash);
+                                wav.wav_name = get_wav_name(
+                                    &wav.default_wav.clone().unwrap(),
+                                    &wav.default_ffx.clone().unwrap(),
+                                    wav_hash,
+                                );
                             } else {
                                 subtitle = json!({
                                     "wav": meta
@@ -353,8 +356,11 @@ impl DLGE {
                         }
 
                         if buf.peek::<u32>()?.inner() != 0 {
-                            let data: serde_json::Value =
-                                xtea_decrypt(self.version, buf.read_sized_vector::<u8>()?.flatten())?.into();
+                            let data: serde_json::Value = xtea_decrypt(
+                                self.version,
+                                buf.read_sized_vector::<u8>()?.flatten(),
+                            )?
+                            .into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
@@ -620,19 +626,18 @@ impl DLGE {
                         buf.append::<u32>(0x00);
                     }
 
-                    if *language == self.default_locale && wav.default_wav.is_some() && wav.default_ffx.is_some() {
-                        buf.append(
-                            self.add_depend(
-                                wav.default_wav.clone().unwrap(),
-                                format!("{:02X}", 0x80 + index),
-                            ),
-                        );
-                        buf.append(
-                            self.add_depend(
-                                wav.default_ffx.clone().unwrap(),
-                                format!("{:02X}", 0x80 + index),
-                            ),
-                        );
+                    if *language == self.default_locale
+                        && wav.default_wav.is_some()
+                        && wav.default_ffx.is_some()
+                    {
+                        buf.append(self.add_depend(
+                            wav.default_wav.clone().unwrap(),
+                            format!("{:02X}", 0x80 + index),
+                        ));
+                        buf.append(self.add_depend(
+                            wav.default_ffx.clone().unwrap(),
+                            format!("{:02X}", 0x80 + index),
+                        ));
 
                         if wav.languages.contains_key(language) {
                             match wav.languages.get(language).unwrap().as_str() {
@@ -870,10 +875,7 @@ impl DLGE {
         let mut old_langmap: Option<Vec<String>> = None;
         if let Some(langmap) = json.langmap {
             old_langmap = Some(self.lang_map.clone());
-            self.lang_map = langmap
-                .split(',')
-                .map(|s| s.to_string())
-                .collect();
+            self.lang_map = langmap.split(',').map(|s| s.to_string()).collect();
         };
 
         let mut buf = ByteWriter::new(Endianness::Little);
@@ -917,24 +919,42 @@ mod tests {
     #[test]
     fn test_valid_wav_hash() {
         // When wav_hash is valid, should return formatted hash
-        assert_eq!(get_wav_name("VALID_HASH", "ALSO_VALID", 0x11111111), "11111111");
+        assert_eq!(
+            get_wav_name("VALID_HASH", "ALSO_VALID", 0x11111111),
+            "11111111"
+        );
         // Extract filename from simple .wav path
         assert_eq!(get_wav_name("sound.wav", "", 0x12345678), "sound");
         assert_eq!(get_wav_name("audio.wav", "invalid", 0x12345678), "audio");
         // Extract filename from .wav with directory path
         assert_eq!(get_wav_name("path/to/sound.wav", "", 0x12345678), "sound");
         assert_eq!(get_wav_name("a/b/c/file.wav", "", 0x12345678), "file");
-        assert_eq!(get_wav_name("/absolute/path/audio.wav", "", 0x12345678), "audio");
+        assert_eq!(
+            get_wav_name("/absolute/path/audio.wav", "", 0x12345678),
+            "audio"
+        );
         // Extract filename from simple .animset path
         assert_eq!(get_wav_name("", "effect.animset", 0x12345678), "effect");
-        assert_eq!(get_wav_name("invalid", "animation.animset", 0x12345678), "animation");
+        assert_eq!(
+            get_wav_name("invalid", "animation.animset", 0x12345678),
+            "animation"
+        );
         // Extract filename from .animset with directory path
-        assert_eq!(get_wav_name("", "path/to/effect.animset", 0x12345678), "effect");
+        assert_eq!(
+            get_wav_name("", "path/to/effect.animset", 0x12345678),
+            "effect"
+        );
         assert_eq!(get_wav_name("", "a/b/c/anim.animset", 0x12345678), "anim");
-        assert_eq!(get_wav_name("", "/absolute/path/file.animset", 0x12345678), "file");
+        assert_eq!(
+            get_wav_name("", "/absolute/path/file.animset", 0x12345678),
+            "file"
+        );
         // Fallback
         assert_eq!(get_wav_name("invalid", "invalid", 0xDEADBEEF), "DEADBEEF");
-        assert_eq!(get_wav_name("noextension", "alsonoext", 0x99999999), "99999999");
+        assert_eq!(
+            get_wav_name("noextension", "alsonoext", 0x99999999),
+            "99999999"
+        );
         assert_eq!(get_wav_name("", "", 0x00000000), "00000000");
     }
 }
