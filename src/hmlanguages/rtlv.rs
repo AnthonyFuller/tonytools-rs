@@ -4,12 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 use crate::{
-    util::{
-        cipher::{xtea_decrypt, xtea_encrypt},
-        rpkg::{compute_hash, is_valid_hash, ResourceMeta},
-        vec_of_strings,
-    },
-    Version,
+    Version, util::{
+        cipher::{xtea_decrypt, xtea_encrypt}, get_language_map, rpkg::{ResourceMeta, compute_hash, is_valid_hash}
+    }
 };
 
 use super::{LangError, LangResult, Rebuilt};
@@ -37,11 +34,11 @@ struct GameRtlv {
 }
 
 impl GameRtlv {
-    pub fn read(buf: &mut ByteReader) -> LangResult<Self> {
-        let video_languages = Self::read_string_vec(buf)?;
+    pub fn read(buf: &mut ByteReader, version: Version) -> LangResult<Self> {
+        let video_languages = Self::read_string_vec(buf, version)?;
         let video_rids = Self::read_rid_vec(buf)?;
-        let subtitle_languages = Self::read_string_vec(buf)?;
-        let subtitles = Self::read_string_vec(buf)?;
+        let subtitle_languages = Self::read_string_vec(buf, version)?;
+        let subtitles = Self::read_string_vec(buf, version)?;
         Ok(GameRtlv {
             video_languages,
             video_rids,
@@ -51,7 +48,7 @@ impl GameRtlv {
         })
     }
 
-    pub fn serialize(&mut self) -> LangResult<Vec<u8>> {
+    pub fn serialize(&mut self, version: Version) -> LangResult<Vec<u8>> {
         let mut buf = ByteWriter::new(Endianness::Little);
 
         // Write bytes for the pointers we change later.
@@ -65,7 +62,7 @@ impl GameRtlv {
             offset as u64,
             (self.video_languages.len() * 16) as u64,
         )?;
-        buf.write_vec(self.write_string_vec(self.video_languages.clone(), offset)?);
+        buf.write_vec(self.write_string_vec(self.video_languages.clone(), offset, version)?);
 
         // Write video rids
         let offset = buf.len();
@@ -88,7 +85,7 @@ impl GameRtlv {
             offset as u64,
             (self.subtitle_languages.len() * 16) as u64,
         )?;
-        buf.write_vec(self.write_string_vec(self.subtitle_languages.clone(), offset)?);
+        buf.write_vec(self.write_string_vec(self.subtitle_languages.clone(), offset, version)?);
 
         // Write subtitles
         let offset = buf.len();
@@ -98,7 +95,7 @@ impl GameRtlv {
             offset as u64,
             (self.subtitles.len() * 16) as u64,
         )?;
-        buf.write_vec(self.write_string_vec(self.subtitles.clone(), offset)?);
+        buf.write_vec(self.write_string_vec(self.subtitles.clone(), offset, version)?);
 
         // Since we are done writing data that is included in the file size.
         // we make the header now.
@@ -138,14 +135,14 @@ impl GameRtlv {
         Ok(())
     }
 
-    fn write_string_vec(&mut self, data: Vec<String>, offset: usize) -> LangResult<Vec<u8>> {
+    fn write_string_vec(&mut self, data: Vec<String>, offset: usize, version: Version) -> LangResult<Vec<u8>> {
         let mut buf = ByteWriter::new(Endianness::Little);
 
         // Write the string structure
         buf.write_vec(vec![0_u8; 16 * data.len()]);
 
         for (i, value) in data.iter().enumerate() {
-            let encrypted = xtea_encrypt(value);
+            let encrypted = xtea_encrypt(version, value)?;
 
             let start = i * 0x10;
             buf.write((encrypted.len() | 0x40000000) as u32, start)?;
@@ -157,7 +154,7 @@ impl GameRtlv {
         Ok(buf.buf())
     }
 
-    fn read_string_vec(buf: &mut ByteReader) -> LangResult<Vec<String>> {
+    fn read_string_vec(buf: &mut ByteReader, version: Version) -> LangResult<Vec<String>> {
         let next = buf.cursor() + 24;
         let start: u64 = buf.read()?.inner();
         let end: u64 = buf.read()?.inner();
@@ -177,7 +174,7 @@ impl GameRtlv {
             let cursor = buf.cursor();
 
             buf.seek(ptr as usize)?;
-            vec.push(xtea_decrypt(buf.read_n(len as usize)?.flatten())?);
+            vec.push(xtea_decrypt(version, buf.read_n(len as usize)?.flatten())?);
 
             buf.seek(cursor)?;
         }
@@ -211,6 +208,7 @@ impl GameRtlv {
 }
 
 pub struct RTLV {
+    version: Version,
     lang_map: Vec<String>,
     depends: IndexMap<String, String>,
 }
@@ -220,18 +218,11 @@ impl RTLV {
         let lang_map = if let Some(map) = lang_map {
             map
         } else {
-            match version {
-                Version::H2016 | Version::H2 => vec_of_strings![
-                    "xx", "en", "fr", "it", "de", "es", "ru", "mx", "br", "pl", "cn", "jp", "tc"
-                ],
-                Version::H3 => {
-                    vec_of_strings!["xx", "en", "fr", "it", "de", "es", "ru", "cn", "tc", "jp"]
-                }
-                _ => return Err(LangError::UnsupportedVersion),
-            }
+            get_language_map(version)?
         };
 
         Ok(RTLV {
+            version,
             lang_map,
             depends: IndexMap::new(),
         })
@@ -254,7 +245,7 @@ impl RTLV {
             subtitles: Map::new(),
         };
 
-        let data = GameRtlv::read(&mut buf)?;
+        let data = GameRtlv::read(&mut buf, self.version)?;
 
         for (lang, rid) in std::iter::zip(data.video_languages, data.video_rids) {
             j.videos.insert(lang, format!("{:016X}", rid).into());
@@ -317,7 +308,7 @@ impl RTLV {
             }
         }
 
-        let buf = rtlv.serialize()?;
+        let buf = rtlv.serialize(self.version)?;
         Ok(Rebuilt {
             file: buf.clone(),
             meta: serde_json::to_string(&ResourceMeta::new(

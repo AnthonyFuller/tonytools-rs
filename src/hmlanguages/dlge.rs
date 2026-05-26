@@ -354,7 +354,7 @@ impl DLGE {
 
                         if buf.peek::<u32>()?.inner() != 0 {
                             let data: serde_json::Value =
-                                xtea_decrypt(buf.read_sized_vector::<u8>()?.flatten())?.into();
+                                xtea_decrypt(self.version, buf.read_sized_vector::<u8>()?.flatten())?.into();
 
                             if subtitle.is_null() {
                                 subtitle = data;
@@ -641,7 +641,7 @@ impl DLGE {
                                         buf.append::<u32>(0);
                                     }
 
-                                    buf.write_sized_vec(xtea_encrypt(str));
+                                    buf.write_sized_vec(xtea_encrypt(self.version, str)?);
                                 }
                                 None => {
                                     buf.append::<u32>(0);
@@ -671,7 +671,7 @@ impl DLGE {
 
                                 if obj.contains_key("subtitle") {
                                     let subtitle = obj["subtitle"].as_str().unwrap();
-                                    buf.write_sized_vec(xtea_encrypt(subtitle));
+                                    buf.write_sized_vec(xtea_encrypt(self.version, subtitle)?);
                                 } else {
                                     buf.append::<u32>(0);
                                 }
@@ -684,7 +684,7 @@ impl DLGE {
                                 if wav.languages.get(language).unwrap().is_string() {
                                     let subtitle =
                                         wav.languages.get(language).unwrap().as_str().unwrap();
-                                    buf.write_sized_vec(xtea_encrypt(subtitle));
+                                    buf.write_sized_vec(xtea_encrypt(self.version, subtitle)?);
                                 } else {
                                     buf.append::<u32>(0);
                                 }
@@ -868,11 +868,9 @@ impl DLGE {
         // This property ensures easy compat with tools like SMF.
         // We restore this back later.
         let mut old_langmap: Option<Vec<String>> = None;
-        if json.langmap.is_some() {
+        if let Some(langmap) = json.langmap {
             old_langmap = Some(self.lang_map.clone());
-            self.lang_map = json
-                .langmap
-                .unwrap()
+            self.lang_map = langmap
                 .split(',')
                 .map(|s| s.to_string())
                 .collect();
@@ -896,8 +894,8 @@ impl DLGE {
 
         self.process_container(&mut buf, &mut json.root, indices.borrow_mut(), true)?;
 
-        if old_langmap.is_some() {
-            self.lang_map = old_langmap.unwrap();
+        if let Some(langmap) = old_langmap {
+            self.lang_map = langmap;
         }
 
         Ok(Rebuilt {

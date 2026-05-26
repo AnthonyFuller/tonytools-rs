@@ -9,6 +9,7 @@ enum GameVersion {
     H3,
     H2,
     H2016,
+    KNT,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -186,6 +187,7 @@ fn real_main() -> i32 {
         GameVersion::H3 => Version::H3,
         GameVersion::H2 => Version::H2,
         GameVersion::H2016 => Version::H2016,
+        GameVersion::KNT => Version::KNT,
     };
 
     let mut hashlist_path = std::env::current_exe().expect("Failed to get current exe path.");

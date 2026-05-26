@@ -2,7 +2,7 @@ use super::Rebuilt;
 use super::{hashlist::HashList, LangError, LangResult};
 use crate::util::cipher::{symmetric_decrypt, symmetric_encrypt, xtea_decrypt, xtea_encrypt};
 use crate::util::rpkg::{self, ResourceMeta};
-use crate::util::vec_of_strings;
+use crate::util::get_language_map;
 use crate::Version;
 use bitchomp::{ByteReader, ByteWriter, Endianness, ChompFlatten};
 use indexmap::IndexMap;
@@ -36,15 +36,7 @@ impl LOCR {
         let lang_map = if let Some(map) = lang_map {
             map
         } else {
-            match version {
-                Version::H2016 | Version::H2 => vec_of_strings![
-                    "xx", "en", "fr", "it", "de", "es", "ru", "mx", "br", "pl", "cn", "jp", "tc"
-                ],
-                Version::H3 => {
-                    vec_of_strings!["xx", "en", "fr", "it", "de", "es", "ru", "cn", "tc", "jp"]
-                }
-                _ => return Err(LangError::UnsupportedVersion),
-            }
+            get_language_map(version)?
         };
 
         Ok(LOCR {
@@ -102,7 +94,7 @@ impl LOCR {
 
                 j.languages[language][hash] = match self.symmetric {
                     true => symmetric_decrypt(str_data)?.into(),
-                    false => xtea_decrypt(str_data)?.into(),
+                    false => xtea_decrypt(self.version, str_data)?.into(),
                 }
             }
         }
@@ -158,7 +150,7 @@ impl LOCR {
                 ));
                 buf.write_sized_vec(match symmetric {
                     true => symmetric_encrypt(str.as_bytes().to_vec()),
-                    false => xtea_encrypt(str),
+                    false => xtea_encrypt(self.version, str)?,
                 });
                 buf.append::<u8>(0);
             }

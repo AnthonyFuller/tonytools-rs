@@ -14,6 +14,7 @@ pub enum Version {
     H2,
     #[default]
     H3,
+    KNT,
 }
 
 pub use hmlanguages::*;

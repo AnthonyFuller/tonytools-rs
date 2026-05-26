@@ -2,31 +2,43 @@ use byteorder::LE;
 use extended_tea::XTEA;
 use once_cell::sync::Lazy;
 
-use crate::hmlanguages::LangResult;
+use crate::{LangError, Version, hmlanguages::LangResult};
 
-static XTEA: Lazy<XTEA> =
+static XTEA_WOA: Lazy<XTEA> =
     Lazy::new(|| XTEA::new(&[0x53527737u32, 0x7506499Eu32, 0xBD39AEE3u32, 0xA59E7268u32]));
 
-pub fn xtea_decrypt(data: Vec<u8>) -> LangResult<String> {
+static XTEA_KNT: Lazy<XTEA> =
+    Lazy::new(|| XTEA::new(&[0x68AC3361u32, 0x562B4AA0u32, 0xB9F2771Fu32, 0x28EB3CE7u32]));
+
+pub fn xtea_decrypt(version: Version, data: Vec<u8>) -> LangResult<String> {
     let mut out_data = data.clone();
 
-    XTEA.decipher_u8slice::<LE>(&data, &mut out_data);
+    match version {
+        Version::KNT => XTEA_KNT.decipher_u8slice::<LE>(&data, &mut out_data),
+        Version::H2016 | Version::H2 | Version::H3 => XTEA_WOA.decipher_u8slice::<LE>(&data, &mut out_data),
+        _ => return Err(LangError::UnsupportedVersion),
+    };
+
     Ok(String::from_utf8(out_data)?
         .trim_matches(char::from(0))
         .to_string())
 }
 
-pub fn xtea_encrypt(str: &str) -> Vec<u8> {
+pub fn xtea_encrypt(version: Version, str: &str) -> LangResult<Vec<u8>> {
     let mut str = str.as_bytes().to_vec();
-    if str.len() % 8 != 0 {
+    if !str.len().is_multiple_of(8) {
         str.extend(vec![0; 8 - (str.len() % 8)]);
     }
 
     let mut out_data = vec![0; str.len()];
 
-    XTEA.encipher_u8slice::<LE>(&str, &mut out_data);
+    match version {
+        Version::KNT => XTEA_KNT.encipher_u8slice::<LE>(&str, &mut out_data),
+        Version::H2016 | Version::H2 | Version::H3 => XTEA_WOA.encipher_u8slice::<LE>(&str, &mut out_data),
+        _ => return Err(LangError::UnsupportedVersion),
+    };
 
-    out_data
+    Ok(out_data)
 }
 
 pub fn symmetric_encrypt(data: Vec<u8>) -> Vec<u8> {
